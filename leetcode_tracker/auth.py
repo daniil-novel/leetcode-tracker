@@ -9,19 +9,14 @@ from datetime import datetime, timedelta
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from authlib.integrations.starlette_client import OAuth
-from passlib.context import CryptContext
 
 from .database import get_db
-from . import models, schemas
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+from . import models
 
 # Секретный ключ для JWT (в продакшене использовать переменную окружения)
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -31,13 +26,11 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 дней
 # OAuth конфигурация
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
 # Инициализация OAuth
 oauth = OAuth()
 
-# Регистрация GitHub OAuth (redirect_uri будет динамический)
+# Регистрация GitHub OAuth
 oauth.register(
     name='github',
     client_id=GITHUB_CLIENT_ID,
@@ -48,15 +41,6 @@ oauth.register(
     access_token_params=None,
     refresh_token_url=None,
     client_kwargs={'scope': 'user:email'},
-)
-
-# Регистрация Google OAuth (redirect_uri будет динамический)
-oauth.register(
-    name='google',
-    client_id=GOOGLE_CLIENT_ID,
-    client_secret=GOOGLE_CLIENT_SECRET,
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'},
 )
 
 # HTTP Bearer security
@@ -148,7 +132,6 @@ def get_or_create_user(
     oauth_id: str,
     email: Optional[str],
     username: str,
-    display_name: Optional[str],
     avatar_url: Optional[str],
     db: Session
 ) -> models.User:
@@ -164,13 +147,6 @@ def get_or_create_user(
         # Обновить данные пользователя
         user.email = email
         user.avatar_url = avatar_url
-        
-        # Обновить display_name если он есть
-        if display_name:
-            profile = db.query(models.UserProfile).filter(models.UserProfile.user_id == user.id).first()
-            if profile:
-                profile.display_name = display_name
-                
         db.commit()
         db.refresh(user)
         return user
@@ -193,70 +169,5 @@ def get_or_create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    
-    # Создать профиль
-    profile = models.UserProfile(
-        user_id=user.id,
-        display_name=display_name or username
-    )
-    db.add(profile)
-    
-    # Создать настройки приватности
-    privacy = models.PrivacySettings(user_id=user.id)
-    db.add(privacy)
-    
-    db.commit()
-    
-    return user
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверить пароль."""
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    """Хешировать пароль."""
-    return pwd_context.hash(password)
-
-
-def authenticate_user(username: str, password: str, db: Session) -> Optional[models.User]:
-    """Аутентифицировать пользователя по username и паролю."""
-    user = db.query(models.User).filter(models.User.username == username).first()
-    if not user:
-        return None
-    if not user.password_hash:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-    return user
-
-
-def create_user(username: str, password: str, email: Optional[str], db: Session) -> models.User:
-    """Создать нового пользователя."""
-    # Проверить, что username уникален
-    existing = db.query(models.User).filter(models.User.username == username).first()
-    if existing:
-        raise ValueError("Username already exists")
-    
-    # Создать пользователя
-    user = models.User(
-        username=username,
-        password_hash=get_password_hash(password),
-        email=email
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    # Создать профиль
-    profile = models.UserProfile(user_id=user.id)
-    db.add(profile)
-    
-    # Создать настройки приватности
-    privacy = models.PrivacySettings(user_id=user.id)
-    db.add(privacy)
-    
-    db.commit()
     
     return user

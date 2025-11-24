@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -29,11 +29,8 @@ from .auth import (
     create_access_token, 
     get_current_user, 
     get_current_user_optional,
-    get_or_create_user,
-    authenticate_user,
-    create_user
+    get_or_create_user
 )
-
 
 # Create DB tables on startup (simple dev approach)
 Base.metadata.create_all(bind=engine)
@@ -71,11 +68,7 @@ async def auth_github(request: Request):
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info("=" * 60)
         logger.info("GitHub OAuth: Starting authorization")
-        logger.info(f"Client ID: {os.getenv('GITHUB_CLIENT_ID', 'NOT SET')[:10]}...")
-        logger.info(f"Request URL: {request.url}")
-        
         redirect_uri = request.url_for('auth_callback_github')
         logger.info(f"Redirect URI: {redirect_uri}")
         
@@ -85,9 +78,6 @@ async def auth_github(request: Request):
         
     except Exception as e:
         logger.error(f"GitHub OAuth ERROR: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
         return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
 
 
@@ -98,14 +88,10 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info("=" * 60)
         logger.info("GitHub OAuth Callback: Started")
-        logger.info(f"Request URL: {request.url}")
-        logger.info(f"Query params: {dict(request.query_params)}")
         
         token = await oauth.github.authorize_access_token(request)
         logger.info("GitHub OAuth: Token received")
-        logger.info(f"Access token: {token.get('access_token', 'NONE')[:20]}...")
         
         # Get user info from GitHub
         async with httpx.AsyncClient() as client:
@@ -123,7 +109,6 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
             oauth_id=str(user_data['id']),
             email=user_data.get('email'),
             username=user_data['login'],
-            display_name=user_data.get('name'),
             avatar_url=user_data.get('avatar_url'),
             db=db
         )
@@ -140,9 +125,7 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
         return response
         
     except Exception as e:
-        logger.error("=" * 60)
         logger.error(f"GitHub OAuth Callback ERROR: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
@@ -177,29 +160,6 @@ def index(
             "today": today,
             "current_user": current_user,
         },
-    )
-
-
-@app.get("/profile/{user_id}", response_class=HTMLResponse)
-def profile_page(
-    request: Request,
-    user_id: int,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
-    db: Session = Depends(get_db)
-):
-    """User profile page."""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return templates.TemplateResponse(
-        "profile.html",
-        {
-            "request": request,
-            "user": user,
-            "current_user": current_user,
-            "is_own_profile": current_user and current_user.id == user_id,
-        }
     )
 
 
@@ -641,78 +601,3 @@ async def import_csv_file(
             status_code=400,
             content={"error": f"Ошибка импорта: {str(e)}"}
         )
-
-
-# ============== Profile Endpoints ==============
-
-@app.put("/api/profile/update")
-def update_profile(
-    profile_data: schemas.UserProfileUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Update current user's profile."""
-    profile = db.query(models.UserProfile).filter(
-        models.UserProfile.user_id == current_user.id
-    ).first()
-    
-    if not profile:
-        profile = models.UserProfile(user_id=current_user.id)
-        db.add(profile)
-    
-    profile.display_name = profile_data.display_name
-    profile.bio = profile_data.bio
-    
-    db.commit()
-    db.refresh(profile)
-    return profile
-
-
-@app.put("/api/privacy/update")
-def update_privacy_settings(
-    privacy_data: schemas.PrivacySettingsUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Update current user's privacy settings."""
-    privacy = db.query(models.PrivacySettings).filter(
-        models.PrivacySettings.user_id == current_user.id
-    ).first()
-    
-    if not privacy:
-        privacy = models.PrivacySettings(user_id=current_user.id)
-        db.add(privacy)
-    
-    privacy.profile_public = privacy_data.profile_public
-    privacy.show_avatar = privacy_data.show_avatar
-    privacy.show_name = privacy_data.show_name
-    privacy.show_stats = privacy_data.show_stats
-    privacy.show_goal_chart = privacy_data.show_goal_chart
-    privacy.show_difficulty_chart = privacy_data.show_difficulty_chart
-    privacy.show_tasks_chart = privacy_data.show_tasks_chart
-    privacy.show_xp_chart = privacy_data.show_xp_chart
-    privacy.show_cumulative_chart = privacy_data.show_cumulative_chart
-    privacy.show_streak_chart = privacy_data.show_streak_chart
-    
-    db.commit()
-    db.refresh(privacy)
-    return privacy
-
-
-@app.get("/api/privacy")
-def get_privacy_settings(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get current user's privacy settings."""
-    privacy = db.query(models.PrivacySettings).filter(
-        models.PrivacySettings.user_id == current_user.id
-    ).first()
-    
-    if not privacy:
-        privacy = models.PrivacySettings(user_id=current_user.id)
-        db.add(privacy)
-        db.commit()
-        db.refresh(privacy)
-    
-    return privacy
