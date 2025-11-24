@@ -2,27 +2,45 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from collections import defaultdict
 import calendar
 
-from fastapi import FastAPI, Depends, Request, Form, UploadFile, File
+from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 import csv
 import io
+import httpx
+import os
 
 from .database import Base, engine, get_db
 from . import models, schemas
+from .auth import (
+    oauth, 
+    create_access_token, 
+    get_current_user, 
+    get_current_user_optional,
+    get_or_create_user,
+    authenticate_user,
+    create_user
+)
 
 
 # Create DB tables on startup (simple dev approach)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LeetCode Tracker")
+
+# Add session middleware for OAuth
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -34,25 +52,169 @@ app.mount(
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
+# ============== Authentication Endpoints ==============
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    """Login page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/auth/simple")
+async def auth_simple(request: Request, db: Session = Depends(get_db)):
+    """Simple login - just enter username, no password required!"""
+    try:
+        data = await request.json()
+        username = data.get('username', '').strip()
+        
+        if not username:
+            raise HTTPException(status_code=400, detail="Введите имя пользователя")
+        
+        if len(username) < 2:
+            raise HTTPException(status_code=400, detail="Имя должно быть минимум 2 символа")
+        
+        # Find existing user by username
+        user = db.query(models.User).filter(models.User.username == username).first()
+        
+        if not user:
+            # Create new user
+            user = models.User(
+                username=username,
+                oauth_provider="simple",
+                oauth_id=username
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Create profile
+            profile = models.UserProfile(user_id=user.id)
+            db.add(profile)
+            
+            # Create privacy settings
+            privacy = models.PrivacySettings(user_id=user.id)
+            db.add(privacy)
+            
+            db.commit()
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": user.id})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "avatar_url": user.avatar_url
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка: {str(e)}")
+
+
+@app.get("/auth/github")
+async def auth_github(request: Request):
+    """Redirect to GitHub OAuth."""
+    redirect_uri = request.url_for('auth_callback_github')
+    return await oauth.github.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/callback/github")
+async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
+    """GitHub OAuth callback."""
+    try:
+        token = await oauth.github.authorize_access_token(request)
+        
+        # Get user info from GitHub
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                'https://api.github.com/user',
+                headers={'Authorization': f'Bearer {token["access_token"]}'}
+            )
+            user_data = resp.json()
+        
+        # Get or create user
+        user = get_or_create_user(
+            oauth_provider="github",
+            oauth_id=str(user_data['id']),
+            email=user_data.get('email'),
+            username=user_data['login'],
+            display_name=user_data.get('name'),
+            avatar_url=user_data.get('avatar_url'),
+            db=db
+        )
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": user.id})
+        
+        # Redirect to home with token in URL
+        response = RedirectResponse(url=f"/?token={access_token}", status_code=303)
+        return response
+        
+    except Exception as e:
+        return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
+
+
+# ============== Main Pages ==============
+
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, db: Session = Depends(get_db)):
+def index(
+    request: Request,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     """Main page with form, table and charts."""
-    tasks = (
-        db.query(models.SolvedTask)
-        .order_by(models.SolvedTask.date.desc(), models.SolvedTask.id.desc())
-        .limit(100)
-        .all()
-    )
+    tasks = []
     today = date.today()
+    
+    if current_user:
+        tasks = (
+            db.query(models.SolvedTask)
+            .filter(models.SolvedTask.user_id == current_user.id)
+            .order_by(models.SolvedTask.date.desc(), models.SolvedTask.id.desc())
+            .limit(100)
+            .all()
+        )
+    
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "tasks": tasks,
             "today": today,
+            "current_user": current_user,
         },
     )
 
+
+@app.get("/profile/{user_id}", response_class=HTMLResponse)
+def profile_page(
+    request: Request,
+    user_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """User profile page."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "user": user,
+            "current_user": current_user,
+            "is_own_profile": current_user and current_user.id == user_id,
+        }
+    )
+
+
+# ============== Task Endpoints ==============
 
 @app.post("/add")
 def add_task(
@@ -63,6 +225,7 @@ def add_task(
     title: str = Form(""),
     problem_id: str = Form(""),
     notes: str = Form(""),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Handle form submission and create a new task."""
@@ -74,7 +237,7 @@ def add_task(
         problem_id=problem_id or None,
         notes=notes or None,
     )
-    task = models.SolvedTask(**task_in.dict())
+    task = models.SolvedTask(**task_in.dict(), user_id=current_user.id)
     db.add(task)
     db.commit()
 
@@ -82,17 +245,92 @@ def add_task(
 
 
 @app.get("/api/tasks", response_model=list[schemas.Task])
-def api_tasks(db: Session = Depends(get_db)):
-    """Return all tasks (for potential future use)."""
-    tasks = db.query(models.SolvedTask).order_by(models.SolvedTask.date.asc()).all()
+def api_tasks(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return all tasks for current user."""
+    tasks = (
+        db.query(models.SolvedTask)
+        .filter(models.SolvedTask.user_id == current_user.id)
+        .order_by(models.SolvedTask.date.asc())
+        .all()
+    )
     return tasks
 
 
+@app.delete("/api/task/{task_id}")
+def delete_task(
+    task_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a specific task."""
+    task = db.query(models.SolvedTask).filter(
+        models.SolvedTask.id == task_id,
+        models.SolvedTask.user_id == current_user.id
+    ).first()
+    
+    if not task:
+        return {"error": "Task not found"}, 404
+    
+    db.delete(task)
+    db.commit()
+    return {"message": "Task deleted successfully"}
+
+
+@app.put("/api/task/{task_id}")
+def update_task(
+    task_id: int,
+    task_data: schemas.TaskCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a specific task."""
+    task = db.query(models.SolvedTask).filter(
+        models.SolvedTask.id == task_id,
+        models.SolvedTask.user_id == current_user.id
+    ).first()
+    
+    if not task:
+        return {"error": "Task not found"}, 404
+    
+    task.date = task_data.date
+    task.difficulty = task_data.difficulty
+    task.points = task_data.points
+    task.title = task_data.title
+    task.problem_id = task_data.problem_id
+    task.notes = task_data.notes
+    
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+@app.delete("/api/tasks/clear")
+def clear_all_tasks(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete all tasks for current user."""
+    deleted_count = db.query(models.SolvedTask).filter(
+        models.SolvedTask.user_id == current_user.id
+    ).delete()
+    db.commit()
+    return {"deleted": deleted_count, "message": f"Successfully deleted {deleted_count} tasks"}
+
+
+# ============== Stats Endpoints ==============
+
 @app.get("/api/stats/daily", response_model=list[schemas.DailyStat])
-def api_daily_stats(db: Session = Depends(get_db)):
-    """Aggregate stats per day: tasks, xp, streak, cumulative xp."""
+def api_daily_stats(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Aggregate stats per day for current user."""
     rows = (
         db.query(models.SolvedTask.date)
+        .filter(models.SolvedTask.user_id == current_user.id)
         .distinct()
         .order_by(models.SolvedTask.date.asc())
         .all()
@@ -108,12 +346,13 @@ def api_daily_stats(db: Session = Depends(get_db)):
         all_dates.append(cur)
         cur = cur + timedelta(days=1)
 
-    from collections import defaultdict
-
     count_by_date: dict[date, int] = defaultdict(int)
     xp_by_date: dict[date, int] = defaultdict(int)
 
-    tasks = db.query(models.SolvedTask).all()
+    tasks = db.query(models.SolvedTask).filter(
+        models.SolvedTask.user_id == current_user.id
+    ).all()
+    
     for t in tasks:
         count_by_date[t.date] += 1
         xp_by_date[t.date] += t.points
@@ -142,18 +381,33 @@ def api_daily_stats(db: Session = Depends(get_db)):
     return stats
 
 
+# ============== Month Goal Endpoints ==============
+
 @app.get("/api/month/goal/{year}/{month}", response_model=schemas.MonthGoal)
-def get_month_goal(year: int, month: int, db: Session = Depends(get_db)):
-    """Get or create month goal."""
+def get_month_goal(
+    year: int,
+    month: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get or create month goal for current user."""
     goal = (
         db.query(models.MonthGoal)
-        .filter(models.MonthGoal.year == year, models.MonthGoal.month == month)
+        .filter(
+            models.MonthGoal.user_id == current_user.id,
+            models.MonthGoal.year == year,
+            models.MonthGoal.month == month
+        )
         .first()
     )
     
     if not goal:
-        # Create default goal
-        goal = models.MonthGoal(year=year, month=month, target_xp=100)
+        goal = models.MonthGoal(
+            user_id=current_user.id,
+            year=year,
+            month=month,
+            target_xp=100
+        )
         db.add(goal)
         db.commit()
         db.refresh(goal)
@@ -162,11 +416,16 @@ def get_month_goal(year: int, month: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/month/goal")
-def set_month_goal(goal_data: schemas.MonthGoalCreate, db: Session = Depends(get_db)):
-    """Set month goal."""
+def set_month_goal(
+    goal_data: schemas.MonthGoalCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set month goal for current user."""
     existing = (
         db.query(models.MonthGoal)
         .filter(
+            models.MonthGoal.user_id == current_user.id,
             models.MonthGoal.year == goal_data.year,
             models.MonthGoal.month == goal_data.month
         )
@@ -179,7 +438,10 @@ def set_month_goal(goal_data: schemas.MonthGoalCreate, db: Session = Depends(get
         db.refresh(existing)
         return existing
     else:
-        goal = models.MonthGoal(**goal_data.dict())
+        goal = models.MonthGoal(
+            **goal_data.dict(),
+            user_id=current_user.id
+        )
         db.add(goal)
         db.commit()
         db.refresh(goal)
@@ -187,17 +449,31 @@ def set_month_goal(goal_data: schemas.MonthGoalCreate, db: Session = Depends(get
 
 
 @app.get("/api/month/stats/{year}/{month}", response_model=schemas.MonthStats)
-def get_month_stats(year: int, month: int, db: Session = Depends(get_db)):
-    """Get complete month statistics with calendar."""
+def get_month_stats(
+    year: int,
+    month: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get complete month statistics for current user."""
     # Get or create goal
     goal = (
         db.query(models.MonthGoal)
-        .filter(models.MonthGoal.year == year, models.MonthGoal.month == month)
+        .filter(
+            models.MonthGoal.user_id == current_user.id,
+            models.MonthGoal.year == year,
+            models.MonthGoal.month == month
+        )
         .first()
     )
     
     if not goal:
-        goal = models.MonthGoal(year=year, month=month, target_xp=100)
+        goal = models.MonthGoal(
+            user_id=current_user.id,
+            year=year,
+            month=month,
+            target_xp=100
+        )
         db.add(goal)
         db.commit()
     
@@ -205,6 +481,7 @@ def get_month_stats(year: int, month: int, db: Session = Depends(get_db)):
     tasks = (
         db.query(models.SolvedTask)
         .filter(
+            models.SolvedTask.user_id == current_user.id,
             extract('year', models.SolvedTask.date) == year,
             extract('month', models.SolvedTask.date) == month
         )
@@ -263,14 +540,18 @@ def get_month_stats(year: int, month: int, db: Session = Depends(get_db)):
     )
 
 
+# ============== CSV Import ==============
+
 @app.post("/api/import/csv")
-async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_csv_file(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Import tasks from uploaded CSV file."""
     try:
-        # Read the file content
         content = await file.read()
         
-        # Try different encodings
         text_content = None
         for encoding in ['utf-8', 'cp1251', 'windows-1251', 'iso-8859-1']:
             try:
@@ -285,7 +566,6 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
                 content={"error": "Не удалось прочитать файл. Попробуйте сохранить файл в кодировке UTF-8"}
             )
         
-        # Parse CSV
         csv_file = io.StringIO(text_content)
         reader = csv.DictReader(csv_file)
         
@@ -294,17 +574,12 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
         
         for row_num, row in enumerate(reader, start=2):
             try:
-                # Support two CSV formats:
-                # Format 1: date,easy,medium,hard (aggregate format)
-                # Format 2: date,difficulty,points,title,problem_id,notes (detailed format)
-                
                 if 'easy' in row or 'medium' in row or 'hard' in row:
-                    # Format 1: Aggregate format
                     task_date = date.fromisoformat(row['date'])
                     
-                    # Add Easy tasks
                     for i in range(int(row.get('easy', 0) or 0)):
                         task = models.SolvedTask(
+                            user_id=current_user.id,
                             date=task_date,
                             difficulty="Easy",
                             points=1,
@@ -314,9 +589,9 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
                         db.add(task)
                         imported_count += 1
                     
-                    # Add Medium tasks
                     for i in range(int(row.get('medium', 0) or 0)):
                         task = models.SolvedTask(
+                            user_id=current_user.id,
                             date=task_date,
                             difficulty="Medium",
                             points=3,
@@ -326,9 +601,9 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
                         db.add(task)
                         imported_count += 1
                     
-                    # Add Hard tasks
                     for i in range(int(row.get('hard', 0) or 0)):
                         task = models.SolvedTask(
+                            user_id=current_user.id,
                             date=task_date,
                             difficulty="Hard",
                             points=5,
@@ -339,17 +614,16 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
                         imported_count += 1
                 
                 else:
-                    # Format 2: Detailed format
                     task_date = date.fromisoformat(row['date'])
                     difficulty = row.get('difficulty', 'Medium')
                     
-                    # Determine points based on difficulty if not specified
                     if 'points' in row and row['points']:
                         points = int(row['points'])
                     else:
                         points = {'Easy': 1, 'Medium': 3, 'Hard': 5}.get(difficulty, 3)
                     
                     task = models.SolvedTask(
+                        user_id=current_user.id,
                         date=task_date,
                         difficulty=difficulty,
                         points=points,
@@ -380,40 +654,76 @@ async def import_csv_file(file: UploadFile = File(...), db: Session = Depends(ge
         )
 
 
-@app.delete("/api/task/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    """Delete a specific task."""
-    task = db.query(models.SolvedTask).filter(models.SolvedTask.id == task_id).first()
-    if not task:
-        return {"error": "Task not found"}, 404
-    
-    db.delete(task)
-    db.commit()
-    return {"message": "Task deleted successfully"}
+# ============== Profile Endpoints ==============
 
-
-@app.put("/api/task/{task_id}")
-def update_task(task_id: int, task_data: schemas.TaskCreate, db: Session = Depends(get_db)):
-    """Update a specific task."""
-    task = db.query(models.SolvedTask).filter(models.SolvedTask.id == task_id).first()
-    if not task:
-        return {"error": "Task not found"}, 404
+@app.put("/api/profile/update")
+def update_profile(
+    profile_data: schemas.UserProfileUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user's profile."""
+    profile = db.query(models.UserProfile).filter(
+        models.UserProfile.user_id == current_user.id
+    ).first()
     
-    task.date = task_data.date
-    task.difficulty = task_data.difficulty
-    task.points = task_data.points
-    task.title = task_data.title
-    task.problem_id = task_data.problem_id
-    task.notes = task_data.notes
+    if not profile:
+        profile = models.UserProfile(user_id=current_user.id)
+        db.add(profile)
+    
+    profile.display_name = profile_data.display_name
+    profile.bio = profile_data.bio
     
     db.commit()
-    db.refresh(task)
-    return task
+    db.refresh(profile)
+    return profile
 
 
-@app.delete("/api/tasks/clear")
-def clear_all_tasks(db: Session = Depends(get_db)):
-    """Delete all tasks."""
-    deleted_count = db.query(models.SolvedTask).delete()
+@app.put("/api/privacy/update")
+def update_privacy_settings(
+    privacy_data: schemas.PrivacySettingsUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user's privacy settings."""
+    privacy = db.query(models.PrivacySettings).filter(
+        models.PrivacySettings.user_id == current_user.id
+    ).first()
+    
+    if not privacy:
+        privacy = models.PrivacySettings(user_id=current_user.id)
+        db.add(privacy)
+    
+    privacy.profile_public = privacy_data.profile_public
+    privacy.show_avatar = privacy_data.show_avatar
+    privacy.show_name = privacy_data.show_name
+    privacy.show_stats = privacy_data.show_stats
+    privacy.show_goal_chart = privacy_data.show_goal_chart
+    privacy.show_difficulty_chart = privacy_data.show_difficulty_chart
+    privacy.show_tasks_chart = privacy_data.show_tasks_chart
+    privacy.show_xp_chart = privacy_data.show_xp_chart
+    privacy.show_cumulative_chart = privacy_data.show_cumulative_chart
+    privacy.show_streak_chart = privacy_data.show_streak_chart
+    
     db.commit()
-    return {"deleted": deleted_count, "message": f"Successfully deleted {deleted_count} tasks"}
+    db.refresh(privacy)
+    return privacy
+
+
+@app.get("/api/privacy")
+def get_privacy_settings(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user's privacy settings."""
+    privacy = db.query(models.PrivacySettings).filter(
+        models.PrivacySettings.user_id == current_user.id
+    ).first()
+    
+    if not privacy:
+        privacy = models.PrivacySettings(user_id=current_user.id)
+        db.add(privacy)
+        db.commit()
+        db.refresh(privacy)
+    
+    return privacy
