@@ -24,20 +24,20 @@
         .auth-container {
             background: #1a1a24;
             border-radius: 20px;
-            padding: 40px;
+            padding: 50px 40px;
             max-width: 450px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
         }
 
         .auth-header {
-            text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         .auth-header h1 {
-            font-size: 32px;
+            font-size: 36px;
             margin-bottom: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -48,57 +48,31 @@
         .auth-header p {
             color: #9ca3af;
             font-size: 16px;
+            margin-bottom: 10px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #e5e7eb;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-group input {
+        .github-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
             width: 100%;
-            padding: 12px 16px;
-            background: #0f0f16;
-            border: 1px solid #374151;
-            border-radius: 8px;
-            color: #e5e7eb;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 16px 24px;
+            background-color: #24292e;
             color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 18px;
             font-weight: 600;
-            cursor: pointer;
             transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
         }
-
-        .submit-btn:hover:not(:disabled) {
+        
+        .github-btn:hover {
+            background-color: #2f363d;
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
         }
 
         .error-message {
@@ -111,26 +85,8 @@
             text-align: center;
         }
 
-        .success-message {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #4ade80;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .hint {
-            color: #6b7280;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-        }
-
         .features {
-            margin-top: 30px;
-            padding-top: 20px;
+            padding-top: 30px;
             border-top: 1px solid #374151;
         }
 
@@ -139,51 +95,24 @@
             align-items: center;
             gap: 10px;
             color: #9ca3af;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-size: 14px;
+            text-align: left;
         }
 
         .feature-icon {
             font-size: 20px;
+            min-width: 24px;
         }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 20px 0;
-            color: #6b7280;
-        }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #374151;
-        }
-        .divider span {
-            padding: 0 10px;
+        .security-note {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #a5b4fc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
             font-size: 14px;
-        }
-
-        .github-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            padding: 14px;
-            background-color: #24292e;
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .github-btn:hover {
-            background-color: #2f363d;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
         }
     </style>
 </head>
@@ -191,120 +120,53 @@
     <div class="auth-container">
         <div class="auth-header">
             <h1>🚀 LeetCode Tracker</h1>
-            <p>Отслеживай прогресс и соревнуйся</p>
+            <p>Отслеживай прогресс решения задач</p>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">Войти через GitHub</p>
         </div>
 
-        <div id="message-container">
-            {% if request.query_params.get('error') %}
-            <div class="error-message">
-                ❌ Ошибка: {{ request.query_params.get('error') }}
-            </div>
-            {% endif %}
+        {% if request.query_params.get('error') %}
+        <div class="error-message">
+            ❌ Ошибка: {{ request.query_params.get('error') }}
         </div>
+        {% endif %}
 
-        <form onsubmit="handleLogin(event)">
-            <div class="form-group">
-                <label for="username">Введите ваше имя</label>
-                <input 
-                    type="text" 
-                    id="username" 
-                    required 
-                    placeholder="Например: Alex"
-                    minlength="2"
-                    autocomplete="username"
-                >
-                <p class="hint">Просто введите любое имя - без паролей!</p>
-            </div>
-            
-            <button type="submit" class="submit-btn" id="submit-btn">
-                Войти
-            </button>
-        </form>
-
-        <div class="divider">
-            <span>ИЛИ</span>
+        <div class="security-note">
+            🔒 Безопасная авторизация через GitHub OAuth
         </div>
 
         <a href="/auth/github" class="github-btn">
-            <svg height="24" viewBox="0 0 16 16" version="1.1" width="24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            <svg height="28" viewBox="0 0 16 16" version="1.1" width="28" aria-hidden="true">
+                <path fill="currentColor" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
             Войти через GitHub
         </a>
 
         <div class="features">
             <div class="feature-item">
                 <span class="feature-icon">✨</span>
-                <span>Быстрый вход без регистрации</span>
+                <span>Автоматический вход через GitHub аккаунт</span>
             </div>
             <div class="feature-item">
                 <span class="feature-icon">📊</span>
-                <span>Отслеживание прогресса</span>
+                <span>Персональное отслеживание прогресса</span>
             </div>
             <div class="feature-item">
                 <span class="feature-icon">🏆</span>
-                <span>Таблица лидеров</span>
+                <span>Таблица лидеров и соревнования</span>
             </div>
             <div class="feature-item">
                 <span class="feature-icon">📈</span>
-                <span>Графики и статистика</span>
+                <span>Графики и детальная статистика</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🔐</span>
+                <span>Безопасное хранение данных</span>
             </div>
         </div>
     </div>
 
     <script>
-        function showMessage(message, type = 'error') {
-            const container = document.getElementById('message-container');
-            const className = type === 'error' ? 'error-message' : 'success-message';
-            const icon = type === 'error' ? '❌' : '✅';
-            container.innerHTML = `<div class="${className}">${icon} ${message}</div>`;
-        }
-
-        async function handleLogin(event) {
-            event.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            const btn = document.getElementById('submit-btn');
-            
-            if (!username || username.length < 2) {
-                showMessage('Введите имя минимум из 2 символов');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Вход...';
-            document.getElementById('message-container').innerHTML = '';
-
-            try {
-                const response = await fetch('/auth/simple', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username: username })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage('Успешный вход! Перенаправление...', 'success');
-                    localStorage.setItem('auth_token', data.access_token);
-                    
-                    // Небольшая задержка чтобы пользователь увидел сообщение
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
-                } else {
-                    showMessage(data.detail || 'Ошибка входа');
-                    btn.disabled = false;
-                    btn.textContent = 'Войти';
-                }
-            } catch (error) {
-                showMessage('Ошибка соединения с сервером');
-                btn.disabled = false;
-                btn.textContent = 'Войти';
-            }
-        }
-
-        // Check for token in URL (from OAuth)
+        // Check for token in URL (from OAuth callback)
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         if (token) {
@@ -313,21 +175,22 @@
         }
 
         // Check if already logged in
-        if (localStorage.getItem('auth_token')) {
+        const existingToken = localStorage.getItem('auth_token');
+        if (existingToken) {
             // Try to validate token
             fetch('/api/stats/daily', {
                 headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                    'Authorization': 'Bearer ' + existingToken
                 }
             }).then(response => {
                 if (response.ok) {
+                    // Token is valid, redirect to main page
                     window.location.href = '/';
                 }
+            }).catch(() => {
+                // Error validating token, stay on login page
             });
         }
-
-        // Focus on input
-        document.getElementById('username').focus();
     </script>
 </body>
 </html>
