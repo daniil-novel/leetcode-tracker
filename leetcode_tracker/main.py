@@ -5,6 +5,10 @@ from pathlib import Path
 from typing import List, Optional
 from collections import defaultdict
 import calendar
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -63,15 +67,45 @@ def login_page(request: Request):
 @app.get("/auth/github")
 async def auth_github(request: Request):
     """Redirect to GitHub OAuth."""
-    redirect_uri = request.url_for('auth_callback_github')
-    return await oauth.github.authorize_redirect(request, redirect_uri)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("=" * 60)
+        logger.info("GitHub OAuth: Starting authorization")
+        logger.info(f"Client ID: {os.getenv('GITHUB_CLIENT_ID', 'NOT SET')[:10]}...")
+        logger.info(f"Request URL: {request.url}")
+        
+        redirect_uri = request.url_for('auth_callback_github')
+        logger.info(f"Redirect URI: {redirect_uri}")
+        
+        result = await oauth.github.authorize_redirect(request, redirect_uri)
+        logger.info("GitHub OAuth: Redirect created successfully")
+        return result
+        
+    except Exception as e:
+        logger.error(f"GitHub OAuth ERROR: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
 
 
 @app.get("/auth/callback/github")
 async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
     """GitHub OAuth callback."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info("=" * 60)
+        logger.info("GitHub OAuth Callback: Started")
+        logger.info(f"Request URL: {request.url}")
+        logger.info(f"Query params: {dict(request.query_params)}")
+        
         token = await oauth.github.authorize_access_token(request)
+        logger.info("GitHub OAuth: Token received")
+        logger.info(f"Access token: {token.get('access_token', 'NONE')[:20]}...")
         
         # Get user info from GitHub
         async with httpx.AsyncClient() as client:
@@ -80,6 +114,8 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
                 headers={'Authorization': f'Bearer {token["access_token"]}'}
             )
             user_data = resp.json()
+            
+        logger.info(f"GitHub user data: {user_data.get('login', 'UNKNOWN')}")
         
         # Get or create user
         user = get_or_create_user(
@@ -92,14 +128,23 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
             db=db
         )
         
+        logger.info(f"User created/found: {user.username} (ID: {user.id})")
+        
         # Create access token
         access_token = create_access_token(data={"sub": user.id})
+        logger.info("JWT token created successfully")
         
         # Redirect to home with token in URL
         response = RedirectResponse(url=f"/?token={access_token}", status_code=303)
+        logger.info("GitHub OAuth: Success! Redirecting to home")
         return response
         
     except Exception as e:
+        logger.error("=" * 60)
+        logger.error(f"GitHub OAuth Callback ERROR: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
 
 

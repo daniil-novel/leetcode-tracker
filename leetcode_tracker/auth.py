@@ -1,8 +1,13 @@
 """OAuth2 authentication for LeetCode Tracker."""
 
 import os
+import logging
 from typing import Optional
 from datetime import datetime, timedelta
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
