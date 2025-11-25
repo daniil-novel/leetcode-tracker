@@ -22,6 +22,12 @@ import csv
 import io
 import httpx
 import os
+import logging
+import traceback
+
+# Configure logging if not already configured in auth.py
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from .database import Base, engine, get_db
 from . import models, schemas
@@ -38,10 +44,24 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LeetCode Tracker")
 
+# Retrieve SECRET_KEY for SessionMiddleware
+SESSION_SECRET_KEY = os.getenv("SECRET_KEY")
+if not SESSION_SECRET_KEY:
+    logger.error("SECRET_KEY environment variable is not set! Session middleware will not function correctly.")
+    # Fallback/error handling, though it should be set in .env
+    SESSION_SECRET_KEY = "fallback-secret-key-if-not-set"
+
+logger.info(f"DEBUG MAIN: SessionMiddleware SECRET_KEY: {'*' * len(SESSION_SECRET_KEY) if SESSION_SECRET_KEY else 'EMPTY'}")
+
 # Add session middleware for OAuth
 app.add_middleware(
     SessionMiddleware, 
-    secret_key=os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    secret_key=SESSION_SECRET_KEY,
+    https_only=True, # Ensure session cookie is only sent over HTTPS
+    # By default, secure=None in SessionMiddleware means it will inspect X-Forwarded-Proto header.
+    # explicit secure=True means it will always create secure cookies.
+    # For a production setup behind HTTPS proxy, https_only=True and ensuring proxy sends X-Forwarded-Proto correctly is best.
+    # We set https_only=True to ensure secure cookies explicitly if X-Forwarded-Proto is missing or wrong.
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -65,34 +85,45 @@ def login_page(request: Request):
 @app.get("/auth/github")
 async def auth_github(request: Request):
     """Redirect to GitHub OAuth."""
-    import logging
-    logger = logging.getLogger(__name__)
+    
+    logger.info("GitHub OAuth: Starting authorization")
+    logger.info(f"Incoming /auth/github headers: {request.headers}")
     
     try:
-        logger.info("GitHub OAuth: Starting authorization")
-        redirect_uri = request.url_for('auth_callback_github')
-        logger.info(f"Redirect URI: {redirect_uri}")
+        redirect_uri = request.url_for('auth_callback_github') 
+        
+        logger.info(f"DEBUG: Generated redirect_uri (from request.url_for): {redirect_uri}")
+        logger.info(f"DEBUG: Session before authorize_redirect: {request.session}")
         
         result = await oauth.github.authorize_redirect(request, redirect_uri)
+        
         logger.info("GitHub OAuth: Redirect created successfully")
+        logger.info(f"DEBUG: Session after authorize_redirect: {request.session}")
         return result
         
+    except HTTPException:
+        # Re-raise HTTPExceptions as they are expected (e.g., Not Authenticated)
+        raise
     except Exception as e:
-        logger.error(f"GitHub OAuth ERROR: {str(e)}")
+        logger.error(f"GitHub OAuth ERROR (auth_github): {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
 
 
 @app.get("/auth/callback/github")
 async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
     """GitHub OAuth callback."""
-    import logging
-    logger = logging.getLogger(__name__)
+    
+    logger.info("GitHub OAuth Callback: Started")
+    logger.info(f"Incoming /auth/callback/github headers: {request.headers}")
+    logger.info(f"DEBUG: Request state param: {request.query_params.get('state')}")
+    logger.info(f"DEBUG: Session state param before authorize_access_token: {request.session.get('github_oauth_state')}") # authlib's default key
     
     try:
-        logger.info("GitHub OAuth Callback: Started")
-        
         token = await oauth.github.authorize_access_token(request)
         logger.info("GitHub OAuth: Token received")
+        # No need to log session state after token acquisition if successful, it means state matched
+        logger.info(f"DEBUG: Tokens received: {'*' * len(str(token))}") # Mask token in logs
         
         # Get user info from GitHub
         async with httpx.AsyncClient() as client:
@@ -100,6 +131,7 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
                 'https://api.github.com/user',
                 headers={'Authorization': f'Bearer {token["access_token"]}'}
             )
+            resp.raise_for_status() # Raise an exception for HTTP errors
             user_data = resp.json()
             
         logger.info(f"GitHub user data: {user_data.get('login', 'UNKNOWN')}")
@@ -125,9 +157,13 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
         logger.info("GitHub OAuth: Success! Redirecting to home")
         return response
         
+    except HTTPException:
+        # Re-raise HTTPExceptions (e.g., from authorize_access_token for mismatching_state)
+        # Authlib uses HTTPException when state mismatches, so we catch it here.
+        logger.error(f"GitHub OAuth Callback ERROR (auth_callback_github): HTTP Exception - {traceback.format_exc()}")
+        return RedirectResponse(url=f"/login?error=mismatching_state:%20CSRF%20Warning!%20State%20not%20equal%20in%20request%20and%20response.", status_code=303)
     except Exception as e:
-        logger.error(f"GitHub OAuth Callback ERROR: {str(e)}")
-        import traceback
+        logger.error(f"GitHub OAuth Callback ERROR (auth_callback_github): {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         return RedirectResponse(url=f"/login?error={str(e)}", status_code=303)
 
