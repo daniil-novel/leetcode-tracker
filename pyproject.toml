@@ -29,7 +29,17 @@ dev = [
 ]
 
 [tool.uv]
-# default settings are fine, this section can stay empty or be omitted
+package = true
 
 [tool.uv.sources]
 # left empty on purpose
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["leetcode_tracker"]
+
+[project.scripts]
+deploy = "leetcode_tracker.deploy:main"

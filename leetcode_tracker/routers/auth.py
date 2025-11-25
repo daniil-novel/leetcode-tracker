@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import templates, get_db
 from ..auth import oauth, create_access_token, get_or_create_user
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,13 @@ def login_page(request: Request):
 async def auth_github(request: Request):
     """Redirect to GitHub OAuth."""
     try:
-        # We can now use url_for because we trust proxy headers (configured in main.py)
-        # This ensures protocol (https) and port are correct if headers are passed correctly.
-        # Fallback to absolute URL if needed, but let's try dynamic first.
-        redirect_uri = request.url_for('auth_callback_github')
+        # Use configured redirect_uri to avoid mismatches/port issues
+        # If not configured (empty), fallback to dynamic url_for
+        if hasattr(settings, 'github_redirect_uri') and settings.github_redirect_uri:
+             redirect_uri = settings.github_redirect_uri
+        else:
+             redirect_uri = request.url_for('auth_callback_github')
+             
         return await oauth.github.authorize_redirect(request, str(redirect_uri))
         
     except Exception as e:

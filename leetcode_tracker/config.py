@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # GitHub OAuth
     github_client_id: str
     github_client_secret: str
-    github_redirect_uri: str = "https://v353999.hosted-by-vdsina.com:7443/auth/callback/github"
+    github_redirect_uri: str = "https://novel-cloudtech.com:7443/auth/callback/github"
     
     # Google OAuth (optional)
     google_client_id: Optional[str] = None

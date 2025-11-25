@@ -116,6 +116,16 @@ docker build -t leetcode-tracker .
 docker run -p 8000:8000 leetcode-tracker
 ```
 
+### Деплой на сервер (One-command)
+
+Приложение настроено для деплоя на сервер (novel-cloudtech.com) одной командой:
+
+```bash
+uv sync --extra dev && uv run deploy
+```
+
+Это загрузит файлы, обновит зависимости и перезапустит сервис.
+
 ### Railway / Render / Vercel
 - `DATABASE_URL` в secrets.
 - `uv sync && uv run uvicorn ...`.

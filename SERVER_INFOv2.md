@@ -127,7 +127,7 @@
             <ServiceName>leetcode-tracker.service</ServiceName>
             <User>root</User>
             <WorkingDirectory>/root/leetcode_tracker_uv</WorkingDirectory>
-            <ExecStart>/root/.local/bin/uv run uvicorn leetcode_tracker.main:app --host 127.0.0.1 --port 8000</ExecStart>
+            <ExecStart>/root/.local/bin/uv run uvicorn leetcode_tracker.main:app --host 127.0.0.1 --port 8000 --proxy-headers</ExecStart>
             <Restart>always</Restart>
             <RestartSec>10</RestartSec>
             <AutoStart>enabled</AutoStart>
@@ -437,66 +437,26 @@
 
     <QuickStartGuides>
         <ApplicationDeployment>
-            <Title>Deploy LeetCode Tracker Application from Scratch</Title>
+            <Title>Deploy LeetCode Tracker (One-Command Deployment)</Title>
             
             <Step number="1">
-                <Description>Connect to server</Description>
-                <Command>ssh root@v353999.hosted-by-vdsina.com</Command>
-                <Alternative>ssh root@91.84.104.36</Alternative>
-                <Password>123123123123123123123123123123Aa!</Password>
+                <Description>Prerequisites</Description>
+                <Requirements>
+                    <Requirement>Local repository clone with `uv` installed</Requirement>
+                    <Requirement>SSH access configured (password or key)</Requirement>
+                    <Requirement>Server password handy if key not set</Requirement>
+                </Requirements>
             </Step>
 
             <Step number="2">
-                <Description>Backup existing database (if exists)</Description>
-                <Command>cp /root/leetcode_tracker_uv/leetcode.db /root/leetcode.db.backup</Command>
+                <Description>Run Deployment Command</Description>
+                <Command>uv sync --extra dev && uv run deploy</Command>
+                <Note>This command uploads local files via SFTP, updates dependencies on server, and restarts the service.</Note>
             </Step>
 
             <Step number="3">
-                <Description>Stop running service (if exists)</Description>
-                <Command>systemctl stop leetcode-tracker</Command>
-            </Step>
-
-            <Step number="4">
-                <Description>Remove old directory and clone fresh code</Description>
-                <Commands>
-                    <Command>rm -rf /root/leetcode_tracker_uv</Command>
-                    <Command>git clone https://github.com/daniil-novel/leetcode-tracker.git /root/leetcode_tracker_uv</Command>
-                    <Command>cd /root/leetcode_tracker_uv</Command>
-                </Commands>
-            </Step>
-
-            <Step number="5">
-                <Description>Restore database</Description>
-                <Command>cp /root/leetcode.db.backup /root/leetcode_tracker_uv/leetcode.db</Command>
-            </Step>
-
-            <Step number="6">
-                <Description>Install dependencies with uv</Description>
-                <Command>/root/.local/bin/uv sync</Command>
-                <Note>This creates .venv and installs all packages</Note>
-            </Step>
-
-            <Step number="7">
-                <Description>Start and enable service</Description>
-                <Commands>
-                    <Command>systemctl daemon-reload</Command>
-                    <Command>systemctl enable leetcode-tracker</Command>
-                    <Command>systemctl start leetcode-tracker</Command>
-                </Commands>
-            </Step>
-
-            <Step number="8">
-                <Description>Verify deployment</Description>
-                <Commands>
-                    <Command>systemctl status leetcode-tracker</Command>
-                    <Command>curl http://127.0.0.1:8000/</Command>
-                    <Command>curl -k https://localhost:7443/</Command>
-                </Commands>
-            </Step>
-
-            <Step number="9">
-                <Description>Check logs if needed</Description>
-                <Command>journalctl -u leetcode-tracker -f</Command>
+                <Description>Manual Verification (Optional)</Description>
+                <Command>ssh root@v353999.hosted-by-vdsina.com "systemctl status leetcode-tracker"</Command>
             </Step>
         </ApplicationDeployment>
 
@@ -510,8 +470,8 @@
 
             <Step number="2">
                 <Description>Configure URLs (Exact Match Required)</Description>
-                <HomepageURL>https://v353999.hosted-by-vdsina.com:7443</HomepageURL>
-                <CallbackURL>https://v353999.hosted-by-vdsina.com:7443/auth/callback/github</CallbackURL>
+                <HomepageURL>https://novel-cloudtech.com:7443</HomepageURL>
+                <CallbackURL>https://novel-cloudtech.com:7443/auth/callback/github</CallbackURL>
             </Step>
 
             <Step number="3">
@@ -524,43 +484,6 @@ SECRET_KEY=your_strong_random_key
                 </Config>
             </Step>
         </GitHubOAuthSetup>
-
-        <UpdateApplicationCode>
-            <Title>Update Application to Latest Code</Title>
-            
-            <Step number="1">
-                <Description>Connect to server</Description>
-                <Command>ssh root@v353999.hosted-by-vdsina.com</Command>
-            </Step>
-
-            <Step number="2">
-                <Description>Stop the service</Description>
-                <Command>systemctl stop leetcode-tracker</Command>
-            </Step>
-
-            <Step number="3">
-                <Description>Pull latest code</Description>
-                <Commands>
-                    <Command>cd /root/leetcode_tracker_uv</Command>
-                    <Command>git pull origin main</Command>
-                </Commands>
-            </Step>
-
-            <Step number="4">
-                <Description>Update dependencies</Description>
-                <Command>/root/.local/bin/uv sync</Command>
-            </Step>
-
-            <Step number="5">
-                <Description>Restart service</Description>
-                <Command>systemctl start leetcode-tracker</Command>
-            </Step>
-
-            <Step number="6">
-                <Description>Verify</Description>
-                <Command>systemctl status leetcode-tracker</Command>
-            </Step>
-        </UpdateApplicationCode>
 
         <LocalDevelopment>
             <Title>Run Application Locally for Development</Title>
@@ -725,19 +648,6 @@ SECRET_KEY=your_strong_random_key
         <Issue name="Nginx proxy not working">
             <Check1>systemctl status nginx</Check1>
             <Check2>nginx -t</Check2>
-
-    <TroubleshootingGuide>
-        <Issue name="Application not responding">
-            <Check1>systemctl status leetcode-tracker</Check1>
-            <Check2>journalctl -u leetcode-tracker -n 50</Check2>
-            <Check3>curl http://127.0.0.1:8000/</Check3>
-            <Check4>ps aux | grep uvicorn</Check4>
-            <Solution>systemctl restart leetcode-tracker</Solution>
-        </Issue>
-
-        <Issue name="Nginx proxy not working">
-            <Check1>systemctl status nginx</Check1>
-            <Check2>nginx -t</Check2>
             <Check3>curl -k https://localhost:7443/</Check3>
             <Check4>tail -f /var/log/nginx/novel-cloudtech.com.error.log</Check4>
             <Solution>systemctl reload nginx</Solution>
@@ -777,8 +687,8 @@ SECRET_KEY=your_strong_random_key
 
         <Issue name="Service won't start">
             <Check1>journalctl -u leetcode-tracker -n 100</Check1>
-            <Check2>cd /root/leetcode_tracker_uv &amp;&amp; /root/.local/bin/uv sync</Check2>
-            <Check3>Test manually: cd /root/leetcode_tracker_uv &amp;&amp; /root/.local/bin/uv run uvicorn leetcode_tracker.main:app</Check3>
+            <Check2>cd /root/leetcode_tracker_uv && /root/.local/bin/uv sync</Check2>
+            <Check3>Test manually: cd /root/leetcode_tracker_uv && /root/.local/bin/uv run uvicorn leetcode_tracker.main:app</Check3>
             <Solution>Check logs for specific error, reinstall dependencies if needed</Solution>
         </Issue>
 
@@ -845,7 +755,7 @@ SECRET_KEY=your_strong_random_key
         </ApplicationSecurity>
 
         <BestPractices>
-            <Practice>Regular system updates: apt update &amp;&amp; apt upgrade</Practice>
+            <Practice>Regular system updates: apt update && apt upgrade</Practice>
             <Practice>Monitor logs regularly: journalctl -u leetcode-tracker</Practice>
             <Practice>Regular database backups</Practice>
             <Practice>Keep SSH keys secure</Practice>
@@ -863,7 +773,7 @@ SECRET_KEY=your_strong_random_key
             
             <Command name="Check application health">
                 <Description>Quick health check of the application</Description>
-                <Code>curl -s http://127.0.0.1:8000/ | head -5 &amp;&amp; echo "Application is responding"</Code>
+                <Code>curl -s http://127.0.0.1:8000/ | head -5 && echo "Application is responding"</Code>
             </Command>
 
             <Command name="Check disk usage">
@@ -958,20 +868,26 @@ SECRET_KEY=your_strong_random_key
     </ContactInformation>
 
     <VersionHistory>
-<<<<<<< HEAD
-=======
+        <Version number="0.1.0" date="2025-11-26">
+             <Changes>
+                <Change>Consolidated deployment workflow with `uv run deploy`</Change>
+                <Change>Fixed GitHub OAuth "redirect_uri mismatch" by enforcing `novel-cloudtech.com` domain in config</Change>
+                <Change>Added `TrustedHostMiddleware` and `SessionMiddleware` hardening for secure proxy handling</Change>
+                <Change>Cleaned up project structure (removed unused scripts)</Change>
+                <Change>Implemented packaging for `leetcode_tracker`</Change>
+            </Changes>
+        </Version>
+
         <Version number="2.5" date="2025-11-25">
             <Changes>
                 <Change>Implemented GitHub OAuth authentication with session management</Change>
                 <Change>Added user profile section in UI (avatar, username, logout)</Change>
                 <Change>Added calendar day color grading based on XP intensity</Change>
-                <Change>Fixed "redirect_uri mismatch" error by hardcoding release URL with port 7443</Change>
                 <Change>Fixed environment variable loading order in main.py</Change>
                 <Change>Configured SessionMiddleware for HTTPS-only cookies</Change>
             </Changes>
         </Version>
 
->>>>>>> feature-auth-oauth-profile
         <Version number="2.1" date="2025-11-25">
             <Changes>
                 <Change>Fixed static file path in base.html from Flask `url_for` to FastAPI compliant `/static/`</Change>

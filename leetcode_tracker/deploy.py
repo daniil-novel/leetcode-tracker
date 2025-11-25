@@ -135,6 +135,7 @@ def main():
 
         duration = time.time() - start_time
         logger.info(f"✨ Deployment completed in {duration:.2f} seconds")
+        logger.info(f"🌐 Home page: https://novel-cloudtech.com:7443")
 
     except Exception as e:
         logger.error(f"❌ Deployment failed: {e}")
