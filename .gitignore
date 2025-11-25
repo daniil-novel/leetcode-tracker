@@ -139,7 +139,18 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # User data
 *.csv
 Цель-на-месяц.csv
+
+# Alembic (keep structure but not local versions during development)
+# Uncomment if you don't want to commit migration files:
+# alembic/versions/*.py
+# !alembic/versions/__init__.py
+
+# Backups
+*.backup
+*.bak
+*_backup_*
