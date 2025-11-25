@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List, Optional
 from collections import defaultdict
 import calendar
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
