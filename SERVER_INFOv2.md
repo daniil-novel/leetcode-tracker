@@ -75,7 +75,7 @@
         <Version>1.0.0</Version>
         <Repository>https://github.com/daniil-novel/leetcode-tracker.git</Repository>
         <CurrentBranch>main</CurrentBranch>
-        <LatestCommit>d803625 - Initial commit: LeetCode Tracker web app with FastAPI</LatestCommit>
+        <LatestCommit>4d37a96 - Complete project state after fixing all issues and adding new features</LatestCommit>
 
         <ProjectStructure>
             <Location>/root/leetcode_tracker_uv</Location>
@@ -140,6 +140,9 @@
             <Feature>Interactive charts (Chart.js): problems per day, XP per day, cumulative XP, streak tracking</Feature>
             <Feature>Recent problems table</Feature>
             <Feature>Monthly XP goal tracking</Feature>
+            <Feature>Detailed month statistics with calendar view</Feature>
+            <Feature>Time spent tracking for tasks</Feature>
+            <Feature>CSV import functionality (supports aggregate and detailed formats)</Feature>
             <Feature>REST API with Swagger UI at /docs</Feature>
         </Features>
 
@@ -169,7 +172,7 @@
                 <MainConfig>/etc/nginx/nginx.conf</MainConfig>
                 <SitesAvailable>/etc/nginx/sites-available/</SitesAvailable>
                 <SitesEnabled>/etc/nginx/sites-enabled/</SitesEnabled>
-                <CurrentSite>/etc/nginx/sites-enabled/novel-cloudtech.com</CurrentSite>
+                <CurrentSite>/etc/nginx/sites-enabled/novel-cloudtech.ru</CurrentSite>
             </Configuration>
 
             <VirtualHost>
@@ -915,6 +918,16 @@
     </ContactInformation>
 
     <VersionHistory>
+        <Version number="2.1" date="2025-11-25">
+            <Changes>
+                <Change>Fixed static file path in base.html from Flask `url_for` to FastAPI compliant `/static/`</Change>
+                <Change>Updated database schema with `time_spent` column (required recreation of leetcode.db on server)</Change>
+                <Change>Added new features: time spent tracking, CSV import functionality, and detailed month statistics with calendar view</Change>
+                <Change>Updated Nginx configuration details</Change>
+                <Change>Minor documentation improvements and updates to reflect latest code</Change>
+            </Changes>
+        </Version>
+        
         <Version number="2.0" date="2025-11-25">
             <Changes>
                 <Change>Added complete LeetCode Tracker application deployment information</Change>
