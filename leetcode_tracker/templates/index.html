@@ -115,6 +115,11 @@
         </label>
 
         <label>
+            <span class="label-text">Время (мин)</span>
+            <input type="number" name="time_spent" id="timeSpentInput" placeholder="Сколько минут потратили?" min="1">
+        </label>
+
+        <label>
             <span class="label-text">ID задачи</span>
             <input type="text" name="problem_id" placeholder="например 209">
         </label>
@@ -186,6 +191,20 @@
             </h3>
             <canvas id="streakChart"></canvas>
         </div>
+        <div class="chart-card" data-chart="timePerTask">
+            <h3>
+                Время на задачу
+                <button class="expand-btn" onclick="expandChart('timePerTask')">⛶</button>
+            </h3>
+            <canvas id="timePerTaskChart"></canvas>
+        </div>
+        <div class="chart-card" data-chart="avgTimeByDifficulty">
+            <h3>
+                Среднее время по сложности
+                <button class="expand-btn" onclick="expandChart('avgTimeByDifficulty')">⛶</button>
+            </h3>
+            <canvas id="avgTimeByDifficultyChart"></canvas>
+        </div>
     </div>
 </section>
 
@@ -253,6 +272,29 @@
         <span class="close-modal" onclick="closeDayModal()">&times;</span>
         <h2 id="dayModalTitle">Детали дня</h2>
         <div id="dayModalContent"></div>
+    </div>
+</div>
+
+<!-- Модальное окно для импорта CSV -->
+<div id="importModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeImportModal()">&times;</span>
+        <h2>Импорт задач из CSV</h2>
+        <form id="uploadCsvForm" class="edit-form">
+            <label class="fullwidth">
+                <span class="label-text">Выберите CSV файл</span>
+                <input type="file" id="csvFile" accept=".csv" required>
+            </label>
+            <div class="modal-buttons">
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">📥</span>
+                    Загрузить
+                </button>
+                <button type="button" class="cancel-btn" onclick="closeImportModal()">
+                    Отмена
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -802,6 +844,174 @@ async function loadStats() {
         const remaining = Math.max(0, monthStats.target_xp - monthStats.current_xp);
         allCharts.monthGoal.data.datasets[0].data = [monthStats.current_xp, remaining];
         allCharts.monthGoal.update();
+    }
+
+    // Загружаем статистику времени
+    const timeStats = await fetch('/api/stats/time').then(r => r.json()).catch(() => null);
+    
+    if (timeStats && timeStats.tasks.length > 0) {
+        // График времени на задачу с перечислением задач
+        const timeLabels = timeStats.tasks.map(t => t.title.substring(0, 20) + (t.title.length > 20 ? '...' : ''));
+        const timeData = timeStats.tasks.map(t => t.time_spent);
+        const timeColors = timeStats.tasks.map(t => {
+            switch(t.difficulty) {
+                case 'Easy': return 'rgba(34, 197, 94, 0.6)';
+                case 'Medium': return 'rgba(251, 191, 36, 0.6)';
+                case 'Hard': return 'rgba(239, 68, 68, 0.6)';
+                default: return 'rgba(99, 102, 241, 0.6)';
+            }
+        });
+
+        allCharts.timePerTask = new Chart(document.getElementById('timePerTaskChart'), {
+            type: 'bar',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Время (мин)',
+                    data: timeData,
+                    backgroundColor: timeColors,
+                    borderColor: timeColors.map(c => c.replace('0.6', '1')),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }, {
+                    label: 'Среднее время',
+                    data: Array(timeData.length).fill(timeStats.average_time),
+                    type: 'line',
+                    borderColor: 'rgba(255, 99, 132, 0.8)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            padding: 10,
+                            usePointStyle: true,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                return timeStats.tasks[index].title;
+                            },
+                            label: function(context) {
+                                if (context.dataset.label === 'Среднее время') {
+                                    return `Среднее: ${timeStats.average_time.toFixed(1)} мин`;
+                                }
+                                return `Время: ${context.parsed.y} мин`;
+                            },
+                            afterLabel: function(context) {
+                                if (context.dataset.label === 'Время (мин)') {
+                                    const index = context.dataIndex;
+                                    const task = timeStats.tasks[index];
+                                    return [`Сложность: ${task.difficulty}`, `Дата: ${task.date}`];
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Минуты'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // График среднего времени по сложности
+        allCharts.avgTimeByDifficulty = new Chart(document.getElementById('avgTimeByDifficultyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Easy', 'Medium', 'Hard'],
+                datasets: [{
+                    label: 'Среднее время (мин)',
+                    data: [
+                        timeStats.avg_by_difficulty.Easy,
+                        timeStats.avg_by_difficulty.Medium,
+                        timeStats.avg_by_difficulty.Hard
+                    ],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.6)',
+                        'rgba(251, 191, 36, 0.6)',
+                        'rgba(239, 68, 68, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(251, 191, 36, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Среднее время: ${context.parsed.y.toFixed(1)} мин`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Минуты'
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        // Если нет данных, показываем пустые графики с сообщением
+        const noDataChart = {
+            type: 'bar',
+            data: {
+                labels: ['Нет данных'],
+                datasets: [{
+                    label: 'Данные отсутствуют',
+                    data: [0],
+                    backgroundColor: 'rgba(100, 116, 139, 0.3)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        };
+        
+        allCharts.timePerTask = new Chart(document.getElementById('timePerTaskChart'), noDataChart);
+        allCharts.avgTimeByDifficulty = new Chart(document.getElementById('avgTimeByDifficultyChart'), noDataChart);
     }
 }
 

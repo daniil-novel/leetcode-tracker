@@ -15,6 +15,7 @@ class SolvedTask(Base):
     title = Column(String(200), nullable=True)
     difficulty = Column(String(10), nullable=False)  # Easy / Medium / Hard
     points = Column(Integer, nullable=False)  # XP
+    time_spent = Column(Integer, nullable=True)  # Time in minutes
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -11,6 +11,7 @@ class TaskBase(BaseModel):
     title: Optional[str] = None
     difficulty: str  # "Easy" | "Medium" | "Hard"
     points: int
+    time_spent: Optional[int] = None  # Time in minutes
     notes: Optional[str] = None
 
 

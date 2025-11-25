@@ -62,6 +62,7 @@ def add_task(
     points: int = Form(...),
     title: str = Form(""),
     problem_id: str = Form(""),
+    time_spent: int = Form(None),
     notes: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -72,6 +73,7 @@ def add_task(
         points=points,
         title=title or None,
         problem_id=problem_id or None,
+        time_spent=time_spent if time_spent else None,
         notes=notes or None,
     )
     task = models.SolvedTask(**task_in.dict())
@@ -417,3 +419,60 @@ def clear_all_tasks(db: Session = Depends(get_db)):
     deleted_count = db.query(models.SolvedTask).delete()
     db.commit()
     return {"deleted": deleted_count, "message": f"Successfully deleted {deleted_count} tasks"}
+
+
+@app.get("/api/stats/time")
+def get_time_stats(db: Session = Depends(get_db)):
+    """Get time statistics for tasks with time_spent data."""
+    tasks = (
+        db.query(models.SolvedTask)
+        .filter(models.SolvedTask.time_spent.isnot(None))
+        .order_by(models.SolvedTask.date.asc())
+        .all()
+    )
+    
+    if not tasks:
+        return {
+            "tasks": [],
+            "average_time": 0,
+            "total_time": 0,
+            "avg_by_difficulty": {
+                "Easy": 0,
+                "Medium": 0,
+                "Hard": 0
+            }
+        }
+    
+    # Calculate average time by difficulty
+    time_by_difficulty = {"Easy": [], "Medium": [], "Hard": []}
+    for task in tasks:
+        if task.time_spent and task.difficulty in time_by_difficulty:
+            time_by_difficulty[task.difficulty].append(task.time_spent)
+    
+    avg_by_difficulty = {
+        diff: (sum(times) / len(times) if times else 0)
+        for diff, times in time_by_difficulty.items()
+    }
+    
+    total_time = sum(t.time_spent for t in tasks if t.time_spent)
+    average_time = total_time / len(tasks) if tasks else 0
+    
+    # Format tasks for chart
+    task_list = [
+        {
+            "id": t.id,
+            "title": t.title or f"Task #{t.problem_id}" if t.problem_id else f"Task {t.id}",
+            "difficulty": t.difficulty,
+            "time_spent": t.time_spent,
+            "date": str(t.date),
+            "points": t.points
+        }
+        for t in tasks
+    ]
+    
+    return {
+        "tasks": task_list,
+        "average_time": round(average_time, 1),
+        "total_time": total_time,
+        "avg_by_difficulty": {k: round(v, 1) for k, v in avg_by_difficulty.items()}
+    }
