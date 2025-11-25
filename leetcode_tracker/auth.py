@@ -25,13 +25,7 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 дней
 
 # OAuth конфигурация
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
-
-# Logging environment variables for debug
-logger.info(f"DEBUG AUTH: SECRET_KEY loaded: {'*' * len(SECRET_KEY) if SECRET_KEY else 'EMPTY'}")
-logger.info(f"DEBUG AUTH: GITHUB_CLIENT_ID loaded: {GITHUB_CLIENT_ID if GITHUB_CLIENT_ID else 'EMPTY'}")
-logger.info(f"DEBUG AUTH: GITHUB_CLIENT_SECRET loaded: {'*' * len(GITHUB_CLIENT_SECRET) if GITHUB_CLIENT_SECRET else 'EMPTY'}")
-
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "") # Correct env var name.
 
 # Инициализация OAuth
 oauth = OAuth()
@@ -47,7 +41,6 @@ oauth.register(
     access_token_params=None,
     refresh_token_url=None,
     client_kwargs={'scope': 'user:email'},
-    # Explicitly define redirect_uri here with the non-standard port
     redirect_uri='https://v353999.hosted-by-vdsina.com:7443/auth/callback/github'
 )
 
