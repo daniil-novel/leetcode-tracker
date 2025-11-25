@@ -1,16 +1,11 @@
 """OAuth2 authentication for LeetCode Tracker."""
 
-import os
 import logging
 from typing import Optional
 from datetime import datetime, timedelta
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
@@ -18,15 +13,11 @@ from authlib.integrations.starlette_client import OAuth
 
 from .database import get_db
 from . import models
+from .config import settings
 
-# Секретный ключ для JWT (в продакшене использовать переменную окружения)
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 дней
-
-# OAuth конфигурация
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "") # Correct env var name.
+# Configure logging
+logging.basicConfig(level=logging.getLevelName(settings.log_level))
+logger = logging.getLogger(__name__)
 
 # Инициализация OAuth
 oauth = OAuth()
@@ -34,15 +25,15 @@ oauth = OAuth()
 # Регистрация GitHub OAuth
 oauth.register(
     name='github',
-    client_id=GITHUB_CLIENT_ID,
-    client_secret=GITHUB_CLIENT_SECRET,
+    client_id=settings.github_client_id,
+    client_secret=settings.github_client_secret,
     authorize_url='https://github.com/login/oauth/authorize',
     authorize_params=None,
     access_token_url='https://github.com/login/oauth/access_token',
     access_token_params=None,
     refresh_token_url=None,
     client_kwargs={'scope': 'user:email'},
-    redirect_uri='https://v353999.hosted-by-vdsina.com:7443/auth/callback/github'
+    redirect_uri=settings.github_redirect_uri
 )
 
 # HTTP Bearer security
@@ -55,10 +46,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+        expire = datetime.utcnow() + timedelta(hours=settings.access_token_expire_hours)
     
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
 
@@ -98,7 +89,7 @@ def get_current_user_optional(
         return None
     
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: int = payload.get("sub")
         if user_id is None:
             logger.warning("Token payload missing 'sub'")
@@ -132,7 +123,7 @@ def get_current_user(
         )
     
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: int = payload.get("sub")
         if user_id is None:
             logger.warning("Authentication failed: Token missing 'sub'")
