@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .database import Base, engine
 from . import models
@@ -27,6 +28,18 @@ app = FastAPI(title=settings.app_title, debug=settings.debug)
 
 # Note: Proxy headers are handled by uvicorn with --proxy-headers flag
 # This is configured in the systemd service file
+
+# Add TrustedHostMiddleware to prevent Host header attacks
+app.add_middleware(
+    TrustedHostMiddleware, 
+    allowed_hosts=[
+        "novel-cloudtech.com", 
+        "*.novel-cloudtech.com", 
+        "localhost", 
+        "127.0.0.1",
+        "v353999.hosted-by-vdsina.com"
+    ]
+)
 
 # Add session middleware for OAuth
 # With ProxyHeadersMiddleware, request.url.scheme should now correctly be 'https'
