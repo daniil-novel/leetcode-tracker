@@ -7,7 +7,6 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .database import Base, engine
 from . import models
@@ -26,9 +25,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.app_title, debug=settings.debug)
 
-# Add ProxyHeadersMiddleware to trust Nginx headers
-# This is CRITICAL for proper HTTPS handling behind reverse proxy
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
+# Note: Proxy headers are handled by uvicorn with --proxy-headers flag
+# This is configured in the systemd service file
 
 # Add session middleware for OAuth
 # With ProxyHeadersMiddleware, request.url.scheme should now correctly be 'https'
@@ -42,7 +40,7 @@ app.add_middleware(
 logger.info(f"🚀 Starting {settings.app_title}")
 logger.info(f"📊 Log level: {settings.log_level}")
 logger.info(f"🔒 HTTPS-only cookies: enabled")
-logger.info(f"🔄 Proxy headers: trusted")
+logger.info(f"� Proxy headers: handled by uvicorn --proxy-headers flag")
 
 # Exception handler for 401 Unauthorized - Redirect to login
 @app.exception_handler(HTTPException)
