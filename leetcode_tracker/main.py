@@ -601,3 +601,11 @@ async def import_csv_file(
             status_code=400,
             content={"error": f"Ошибка импорта: {str(e)}"}
         )
+
+
+@app.get("/logout")
+def logout():
+    """Logout endpoint."""
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("Authorization") # Consider removing other session cookies or local storage items if used
+    return response

@@ -12,9 +12,9 @@
 Заполните поля точно так, как указано ниже (данные для вашего сервера `v353999.hosted-by-vdsina.com`):
 
 *   **Application name**: `LeetCode Tracker`
-*   **Homepage URL**: `http://v353999.hosted-by-vdsina.com:8000`
+*   **Homepage URL**: `https://v353999.hosted-by-vdsina.com:7443`
 *   **Application description**: (можно оставить пустым)
-*   **Authorization callback URL**: `http://v353999.hosted-by-vdsina.com:8000/auth/callback/github`
+*   **Authorization callback URL**: `https://v353999.hosted-by-vdsina.com:7443/auth/callback/github`
 
 👉 Нажмите кнопку **"Register application"**.
 
