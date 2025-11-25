@@ -120,8 +120,22 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
         # Create access token
         access_token = create_access_token(data={"sub": user.id})
         
-        # Redirect to home with token in URL
-        return RedirectResponse(url=f"/?token={access_token}", status_code=303)
+        # Create redirect response
+        # Redirect to home, token not needed in URL as we set cookie
+        response = RedirectResponse(url="/", status_code=303)
+        
+        # Set persistent secure cookie
+        response.set_cookie(
+            key="Authorization",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            max_age=60 * 60 * 24 * 7, # 7 days matches token expiry
+            secure=True, 
+            samesite="lax"
+        )
+        
+        logger.info(f"Auth successful for {user.username}, setting cookie")
+        return response
         
     except HTTPException:
         logger.error(f"GitHub OAuth Callback HTTP Exception: {traceback.format_exc()}")
@@ -133,6 +147,35 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
 
 
 # ============== Main Pages ==============
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """User profile page."""
+    # Calculate stats
+    total_xp = db.query(func.sum(models.SolvedTask.points)).filter(models.SolvedTask.user_id == current_user.id).scalar() or 0
+    total_tasks = db.query(func.count(models.SolvedTask.id)).filter(models.SolvedTask.user_id == current_user.id).scalar() or 0
+    
+    current_date = date.today()
+    tasks_this_month = db.query(func.count(models.SolvedTask.id)).filter(
+        models.SolvedTask.user_id == current_user.id,
+        extract('month', models.SolvedTask.date) == current_date.month,
+        extract('year', models.SolvedTask.date) == current_date.year
+    ).scalar() or 0
+
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "total_xp": total_xp,
+            "total_tasks": total_tasks,
+            "tasks_this_month": tasks_this_month
+        },
+    )
 
 @app.get("/", response_class=HTMLResponse)
 def index(

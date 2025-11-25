@@ -50,6 +50,20 @@
     color: var(--text);
 }
 
+.profile-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 0.2s;
+}
+
+.profile-link:hover {
+    opacity: 0.8;
+}
+
+/* Legacy logout button in case it's used elsewhere, can keep or remove */
 .logout-button {
     margin-left: auto;
     padding: 8px 14px;
