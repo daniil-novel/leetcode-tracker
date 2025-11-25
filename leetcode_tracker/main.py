@@ -90,11 +90,13 @@ async def auth_github(request: Request):
     logger.info(f"Incoming /auth/github headers: {request.headers}")
     
     try:
-        redirect_uri = request.url_for('auth_callback_github') 
+        # Force the redirect_uri to include the port 7443 as request.url_for is dropping it
+        redirect_uri = 'https://v353999.hosted-by-vdsina.com:7443/auth/callback/github'
         
-        logger.info(f"DEBUG: Generated redirect_uri (from request.url_for): {redirect_uri}")
+        logger.info(f"DEBUG: Using forced redirect_uri (with port 7443): {redirect_uri}")
         logger.info(f"DEBUG: Session before authorize_redirect: {request.session}")
         
+        # NOTE: authlib's authorize_redirect stores state in session automatically
         result = await oauth.github.authorize_redirect(request, redirect_uri)
         
         logger.info("GitHub OAuth: Redirect created successfully")
@@ -153,15 +155,17 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
         logger.info("JWT token created successfully")
         
         # Redirect to home with token in URL
+        # Ensure redirect to home preserves HTTPS and Port implicitly by being relative or using correct base if needed
+        # RedirectResponse handles relative URLs fine.
         response = RedirectResponse(url=f"/?token={access_token}", status_code=303)
         logger.info("GitHub OAuth: Success! Redirecting to home")
         return response
         
     except HTTPException:
         # Re-raise HTTPExceptions (e.g., from authorize_access_token for mismatching_state)
-        # Authlib uses HTTPException when state mismatches, so we catch it here.
         logger.error(f"GitHub OAuth Callback ERROR (auth_callback_github): HTTP Exception - {traceback.format_exc()}")
-        return RedirectResponse(url=f"/login?error=mismatching_state:%20CSRF%20Warning!%20State%20not%20equal%20in%20request%20and%20response.", status_code=303)
+        # Catch mismatch and suggest retry or check cookies
+        return RedirectResponse(url=f"/login?error=mismatching_state:%20Please%20try%20again%20or%20clear%20cookies.", status_code=303)
     except Exception as e:
         logger.error(f"GitHub OAuth Callback ERROR (auth_callback_github): {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")

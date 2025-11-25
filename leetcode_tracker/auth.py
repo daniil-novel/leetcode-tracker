@@ -47,6 +47,8 @@ oauth.register(
     access_token_params=None,
     refresh_token_url=None,
     client_kwargs={'scope': 'user:email'},
+    # Explicitly define redirect_uri here with the non-standard port
+    redirect_uri='https://v353999.hosted-by-vdsina.com:7443/auth/callback/github'
 )
 
 # HTTP Bearer security
