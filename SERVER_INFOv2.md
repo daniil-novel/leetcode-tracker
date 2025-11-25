@@ -75,7 +75,7 @@
         <Version>1.0.0</Version>
         <Repository>https://github.com/daniil-novel/leetcode-tracker.git</Repository>
         <CurrentBranch>main</CurrentBranch>
-        <LatestCommit>4d37a96 - Complete project state after fixing all issues and adding new features</LatestCommit>
+        <LatestCommit>Merged feature-auth-oauth-profile: Fix auth redirection loop using persistent cookies, add user profile page, and improve logging</LatestCommit>
 
         <ProjectStructure>
             <Location>/root/leetcode_tracker_uv</Location>
@@ -140,9 +140,11 @@
             <Feature>Interactive charts (Chart.js): problems per day, XP per day, cumulative XP, streak tracking</Feature>
             <Feature>Recent problems table</Feature>
             <Feature>Monthly XP goal tracking</Feature>
+            <Feature>GitHub OAuth Authentication (with profile picture and username display)</Feature>
             <Feature>Detailed month statistics with calendar view</Feature>
             <Feature>Time spent tracking for tasks</Feature>
             <Feature>CSV import functionality (supports aggregate and detailed formats)</Feature>
+            <Feature>Calendar heatmap/color grading based on daily XP</Feature>
             <Feature>REST API with Swagger UI at /docs</Feature>
         </Features>
 
@@ -498,6 +500,31 @@
             </Step>
         </ApplicationDeployment>
 
+        <GitHubOAuthSetup>
+            <Title>GitHub OAuth Configuration</Title>
+            
+            <Step number="1">
+                <Description>Create GitHub OAuth App</Description>
+                <URL>https://github.com/settings/developers</URL>
+            </Step>
+
+            <Step number="2">
+                <Description>Configure URLs (Exact Match Required)</Description>
+                <HomepageURL>https://v353999.hosted-by-vdsina.com:7443</HomepageURL>
+                <CallbackURL>https://v353999.hosted-by-vdsina.com:7443/auth/callback/github</CallbackURL>
+            </Step>
+
+            <Step number="3">
+                <Description>Configure Environment Variables</Description>
+                <Note>Edit .env file on server</Note>
+                <Config>
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+SECRET_KEY=your_strong_random_key
+                </Config>
+            </Step>
+        </GitHubOAuthSetup>
+
         <UpdateApplicationCode>
             <Title>Update Application to Latest Code</Title>
             
@@ -551,7 +578,7 @@
 
             <Step number="3">
                 <Description>Install dependencies</Description>
-                <Command>cd leetcode-tracker &amp;&amp; uv sync</Command>
+                <Command>cd leetcode-tracker && uv sync</Command>
             </Step>
 
             <Step number="4">
@@ -638,7 +665,7 @@
 
     <MaintenanceCommands>
         <SystemUpdates>
-            <UpdatePackages>sudo apt update &amp;&amp; sudo apt upgrade -y</UpdatePackages>
+            <UpdatePackages>sudo apt update && sudo apt upgrade -y</UpdatePackages>
             <CleanOldPackages>sudo apt autoremove -y</CleanOldPackages>
             <UpdateUV>pip install --upgrade uv</UpdateUV>
         </SystemUpdates>
@@ -685,6 +712,19 @@
             <DownloadDirectory>scp -r root@v353999.hosted-by-vdsina.com:/remote/dir /local/path</DownloadDirectory>
         </FileTransfer>
     </MaintenanceCommands>
+
+    <TroubleshootingGuide>
+        <Issue name="Application not responding">
+            <Check1>systemctl status leetcode-tracker</Check1>
+            <Check2>journalctl -u leetcode-tracker -n 50</Check2>
+            <Check3>curl http://127.0.0.1:8000/</Check3>
+            <Check4>ps aux | grep uvicorn</Check4>
+            <Solution>systemctl restart leetcode-tracker</Solution>
+        </Issue>
+
+        <Issue name="Nginx proxy not working">
+            <Check1>systemctl status nginx</Check1>
+            <Check2>nginx -t</Check2>
 
     <TroubleshootingGuide>
         <Issue name="Application not responding">
@@ -918,6 +958,20 @@
     </ContactInformation>
 
     <VersionHistory>
+<<<<<<< HEAD
+=======
+        <Version number="2.5" date="2025-11-25">
+            <Changes>
+                <Change>Implemented GitHub OAuth authentication with session management</Change>
+                <Change>Added user profile section in UI (avatar, username, logout)</Change>
+                <Change>Added calendar day color grading based on XP intensity</Change>
+                <Change>Fixed "redirect_uri mismatch" error by hardcoding release URL with port 7443</Change>
+                <Change>Fixed environment variable loading order in main.py</Change>
+                <Change>Configured SessionMiddleware for HTTPS-only cookies</Change>
+            </Changes>
+        </Version>
+
+>>>>>>> feature-auth-oauth-profile
         <Version number="2.1" date="2025-11-25">
             <Changes>
                 <Change>Fixed static file path in base.html from Flask `url_for` to FastAPI compliant `/static/`</Change>

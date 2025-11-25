@@ -1,14 +1,33 @@
-from sqlalchemy import Column, Integer, String, Date, Text
+from sqlalchemy import Column, Integer, String, Date, Text, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
+from sqlalchemy.orm import relationship
 
 from .database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    oauth_provider = Column(String(20), nullable=True)  # 'github'
+    oauth_id = Column(String(255), nullable=True, index=True)
+    avatar_url = Column(String(500), nullable=True)
+    
+    # Relationships
+    tasks = relationship("SolvedTask", back_populates="user", cascade="all, delete-orphan")
+    month_goals = relationship("MonthGoal", back_populates="user", cascade="all, delete-orphan")
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class SolvedTask(Base):
     __tablename__ = "solved_tasks"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     date = Column(Date, nullable=False, index=True)
     platform = Column(String(50), nullable=False, default="leetcode")
     problem_id = Column(String(50), nullable=True)
@@ -18,6 +37,9 @@ class SolvedTask(Base):
     time_spent = Column(Integer, nullable=True)  # Time in minutes
     notes = Column(Text, nullable=True)
 
+    # Relationships
+    user = relationship("User", back_populates="tasks")
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -25,8 +47,12 @@ class MonthGoal(Base):
     __tablename__ = "month_goals"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     year = Column(Integer, nullable=False)
     month = Column(Integer, nullable=False)  # 1-12
     target_xp = Column(Integer, nullable=False, default=100)
+    
+    # Relationships
+    user = relationship("User", back_populates="month_goals")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

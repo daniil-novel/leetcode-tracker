@@ -8,11 +8,61 @@
 </head>
 <body>
     <header class="header">
-        <h1>LeetCode Tracker</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>LeetCode Tracker</h1>
+            {% if current_user %}
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span style="color: #9ca3af;">Привет, {{ current_user.username }}!</span>
+                <button onclick="logout()" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer;">
+                    Выйти
+                </button>
+            </div>
+            {% endif %}
+        </div>
     </header>
 
     <main class="container">
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        // Глобальная функция для выхода
+        function logout() {
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login';
+        }
+
+        // Перехватываем все fetch запросы и добавляем токен
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            let [resource, config] = args;
+            
+            // Добавляем токен ко всем API запросам
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                config = config || {};
+                config.headers = config.headers || {};
+                config.headers['Authorization'] = 'Bearer ' + token;
+            }
+            
+            return originalFetch(resource, config).then(response => {
+                // Если 401 - редирект на логин
+                if (response.status === 401) {
+                    localStorage.removeItem('auth_token');
+                    window.location.href = '/login';
+                }
+                return response;
+            });
+        };
+
+        // Проверка токена при загрузке страницы
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        if (tokenFromUrl) {
+            localStorage.setItem('auth_token', tokenFromUrl);
+            // Убираем токен из URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
 </body>
 </html>
