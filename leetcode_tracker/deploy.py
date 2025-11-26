@@ -32,7 +32,8 @@ EXCLUDE_LIST = {
     "leetcode.db",    # Don't overwrite production database
     "scripts",        # We are running from here, but maybe useful to have on server? Let's keep it.
     "auto_deploy.py", # Deleted locally, but just in case
-    "deploy_to_server.sh" 
+    "deploy_to_server.sh",
+    "node_modules"    # Exclude node_modules from frontend
 }
 
 def create_ssh_client():

@@ -43,6 +43,11 @@ security = HTTPBearer(auto_error=False)
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Создать JWT токен."""
     to_encode = data.copy()
+    
+    # Ensure 'sub' is a string (JWT standard requires it)
+    if "sub" in to_encode and not isinstance(to_encode["sub"], str):
+        to_encode["sub"] = str(to_encode["sub"])
+    
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -90,12 +95,17 @@ def get_current_user_optional(
     
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
             logger.warning("Token payload missing 'sub'")
             return None
+        # Convert string to int
+        user_id = int(user_id_str)
     except JWTError as e:
         logger.debug(f"JWT Error in optional auth: {e}")
+        return None
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid user_id in token: {e}")
         return None
     except Exception as e:
         logger.error(f"Unexpected error in optional auth: {e}")
@@ -124,16 +134,25 @@ def get_current_user(
     
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
             logger.warning("Authentication failed: Token missing 'sub'")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        # Convert string to int
+        user_id = int(user_id_str)
     except JWTError as e:
         logger.warning(f"Authentication failed: JWT Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Authentication failed: Invalid user_id format: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",

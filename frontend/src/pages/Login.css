@@ -1,0 +1,104 @@
+.login-body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-container {
+    background: #1a1a24;
+    border-radius: 20px;
+    padding: 50px 40px;
+    max-width: 450px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.auth-header {
+    margin-bottom: 40px;
+}
+
+.auth-header h1 {
+    font-size: 36px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-header p {
+    color: #9ca3af;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.github-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 16px 24px;
+    background-color: #24292e;
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 30px;
+    cursor: pointer;
+}
+
+.github-btn:hover {
+    background-color: #2f363d;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.features {
+    padding-top: 30px;
+    border-top: 1px solid #374151;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #9ca3af;
+    margin-bottom: 12px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.feature-icon {
+    font-size: 20px;
+    min-width: 24px;
+}
+
+.security-note {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #a5b4fc;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    font-size: 14px;
+}

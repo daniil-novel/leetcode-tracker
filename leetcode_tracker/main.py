@@ -6,13 +6,14 @@ import logging
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .database import Base, engine
 from . import models
 from .config import settings
-from .routers import auth, tasks, stats, frontend
+from .routers import auth, tasks, stats
 
 # Configure logging
 logging.basicConfig(
@@ -64,23 +65,45 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         response.delete_cookie("Authorization", path="/")
         response.delete_cookie("session", path="/")
         return response
-    # For other HTTP exceptions, use default handler
-    return await request.app.default_exception_handler(request, exc)
+    # For other HTTP exceptions, re-raise to use FastAPI's default handling
+    raise exc
 
 
 BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST_DIR = BASE_DIR.parent / "frontend" / "dist"
 
-app.mount(
-    "/static",
-    StaticFiles(directory=str(BASE_DIR / "static")),
-    name="static",
-)
-# Templates are handled by dependencies.py now
+# Mount static files from React build
+if FRONTEND_DIST_DIR.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(FRONTEND_DIST_DIR / "assets")),
+        name="assets",
+    )
 
-# Include routers
-app.include_router(frontend.router)
+# Serve React App for root and fallback - MUST be defined BEFORE including routers
+# so that API routes take precedence
+@app.get("/")
+async def serve_root():
+    """Serve React app root."""
+    return FileResponse(FRONTEND_DIST_DIR / "index.html")
+
+# Include routers - these will take precedence over the catch-all below
 app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(stats.router)
 
-# All other content (endpoints) removed as they are now in routers
+# Catch-all route for SPA routing - this should be LAST
+# Exclude API paths to prevent conflicts
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    # Don't serve SPA for API paths
+    if full_path.startswith(("api/", "auth/", "add/", "stats/")):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # Check if file exists in dist (e.g. favicon.ico, robots.txt)
+    file_path = FRONTEND_DIST_DIR / full_path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path)
+        
+    # Otherwise serve index.html for SPA routing
+    return FileResponse(FRONTEND_DIST_DIR / "index.html")

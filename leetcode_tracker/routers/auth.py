@@ -2,21 +2,31 @@ import logging
 import traceback
 import httpx
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from ..dependencies import templates, get_db
-from ..auth import oauth, create_access_token, get_or_create_user
+from ..auth import oauth, create_access_token, get_or_create_user, get_current_user
 from ..config import settings
+from .. import models
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    """Login page."""
-    return templates.TemplateResponse("login.html", {"request": request})
+# Remove the /login route - it's handled by React SPA routing
+# The catch-all route in main.py will serve the React app for /login
+
+@router.get("/api/auth/me")
+async def get_current_user_info(current_user: models.User = Depends(get_current_user)):
+    """Get current authenticated user information."""
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "avatar_url": current_user.avatar_url,
+        "oauth_provider": current_user.oauth_provider
+    }
 
 
 @router.get("/auth/github")
@@ -68,10 +78,11 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
         # Create access token
         access_token = create_access_token(data={"sub": user.id})
         
-        # Create redirect response
-        response = RedirectResponse(url="/", status_code=303)
+        # Create redirect response with token in URL for frontend
+        # This allows the React frontend to extract the token and store it
+        response = RedirectResponse(url=f"/login?token={access_token}", status_code=303)
         
-        # Set persistent secure cookie
+        # Set persistent secure cookie (optional, but good for backup)
         response.set_cookie(
             key="Authorization",
             value=f"Bearer {access_token}",
@@ -82,7 +93,7 @@ async def auth_callback_github(request: Request, db: Session = Depends(get_db)):
             path="/"
         )
         
-        logger.info(f"Auth successful for {user.username}, setting cookie")
+        logger.info(f"Auth successful for {user.username}, redirecting with token")
         return response
         
     except HTTPException:
