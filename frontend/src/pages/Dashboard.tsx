@@ -90,6 +90,21 @@ const Dashboard = () => {
           {user && (
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
               <span style={{ color: '#9ca3af' }}>Привет, {user.username}!</span>
+              <a 
+                href="/profile"
+                style={{ 
+                  padding: '8px 16px', 
+                  background: 'rgba(59, 130, 246, 0.2)', 
+                  color: '#60a5fa', 
+                  border: '1px solid rgba(59, 130, 246, 0.3)', 
+                  borderRadius: '6px', 
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  display: 'inline-block'
+                }}
+              >
+                ⚙️ Профиль
+              </a>
               <button 
                 onClick={logout} 
                 style={{ 

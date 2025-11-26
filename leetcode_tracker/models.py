@@ -15,6 +15,7 @@ class User(Base):
     oauth_provider = Column(String(20), nullable=True)  # 'github'
     oauth_id = Column(String(255), nullable=True, index=True)
     avatar_url = Column(String(500), nullable=True)
+    leetcode_username = Column(String(100), nullable=True, index=True)  # LeetCode username for API sync
     
     # Relationships
     tasks = relationship("SolvedTask", back_populates="user", cascade="all, delete-orphan")

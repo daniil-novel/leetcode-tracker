@@ -141,14 +141,17 @@ def main():
         # 3. Update dependencies
         execute_command(client, f"cd {REMOTE_DIR} && /root/.local/bin/uv sync", "Syncing dependencies with UV")
 
-        # 4. Update systemd service if changed
+        # 4. Apply database migrations
+        execute_command(client, f"cd {REMOTE_DIR} && /root/.local/bin/uv run alembic upgrade head", "Applying database migrations")
+
+        # 5. Update systemd service if changed
         execute_command(client, f"cp {REMOTE_DIR}/leetcode-tracker.service /etc/systemd/system/", "Updating systemd service")
         execute_command(client, "systemctl daemon-reload", "Reloading systemd daemon")
 
-        # 5. Start service
+        # 6. Start service
         execute_command(client, "systemctl start leetcode-tracker", "Starting service")
         
-        # 6. check status
+        # 7. check status
         time.sleep(2)
         execute_command(client, "systemctl status leetcode-tracker --no-pager", "Checking service status")
 

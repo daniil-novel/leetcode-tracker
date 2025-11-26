@@ -13,7 +13,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from .database import Base, engine
 from . import models
 from .config import settings
-from .routers import auth, tasks, stats
+from .routers import auth, tasks, stats, leetcode, sync, profile
+from .leetcode_client import close_leetcode_client
+from .background_sync import start_sync_service, stop_sync_service
 
 # Configure logging
 logging.basicConfig(
@@ -91,6 +93,27 @@ async def serve_root():
 app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(stats.router)
+app.include_router(leetcode.router)
+app.include_router(sync.router)
+app.include_router(profile.router)
+
+# Lifecycle events
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources on startup"""
+    logger.info("Starting up application...")
+    await start_sync_service()
+    logger.info("Background sync service started")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown"""
+    logger.info("Shutting down application...")
+    await stop_sync_service()
+    await close_leetcode_client()
+    logger.info("Background sync service and LeetCode client closed")
+
 
 # Catch-all route for SPA routing - this should be LAST
 # Exclude API paths to prevent conflicts

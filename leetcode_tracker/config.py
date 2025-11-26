@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     
+    # LeetCode Auto-Sync
+    leetcode_sync_enabled: bool = True
+    leetcode_sync_interval: int = 10  # seconds
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
