@@ -155,7 +155,6 @@
     <h2>
         <span class="section-icon">📈</span>
         Графики продуктивности
-        <button id="importCsvBtn" class="import-btn">📥 Импорт из CSV</button>
     </h2>
     <div class="chart-grid">
         <div class="chart-card" data-chart="monthGoal">
@@ -399,53 +398,6 @@ document.getElementById('setGoalBtn').addEventListener('click', async () => {
         alert('Цель обновлена!');
     }
 });
-
-// Импорт данных из CSV
-document.getElementById('importCsvBtn').addEventListener('click', () => {
-    document.getElementById('importModal').style.display = 'flex';
-});
-
-// Закрыть модальное окно импорта
-function closeImportModal() {
-    document.getElementById('importModal').style.display = 'none';
-    document.getElementById('csvFile').value = '';
-}
-
-// Обработка загрузки CSV файла
-document.getElementById('uploadCsvForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Пожалуйста, выберите файл');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fetch('/api/import/csv', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            alert(result.message);
-            closeImportModal();
-            location.reload();
-        } else {
-            alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
-        }
-    } catch (error) {
-        alert('Ошибка загрузки файла: ' + error.message);
-    }
-});
-
 
 // Загрузка статистики месяца
 async function loadMonthStats(year, month) {
