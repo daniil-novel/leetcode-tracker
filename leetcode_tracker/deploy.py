@@ -72,21 +72,39 @@ def execute_command(client, command, description=None):
         return False
     return True
 
+def mkdir_p(sftp, remote_directory):
+    """Create remote directory recursively (like mkdir -p)."""
+    remote_directory = str(remote_directory).replace("\\", "/")
+    
+    if remote_directory == '/':
+        return
+    
+    try:
+        sftp.stat(remote_directory)
+    except IOError:
+        # Directory doesn't exist, create parent first
+        parent = os.path.dirname(remote_directory)
+        if parent and parent != remote_directory:
+            mkdir_p(sftp, parent)
+        
+        try:
+            sftp.mkdir(remote_directory)
+            logger.debug(f"Created remote directory: {remote_directory}")
+        except IOError as e:
+            # Directory might have been created by another process
+            try:
+                sftp.stat(remote_directory)
+            except IOError:
+                logger.error(f"Failed to create remote directory {remote_directory}: {e}")
+                raise
+
 def upload_files(sftp, local_path, remote_path):
     """Recursively upload files."""
     local_path = Path(local_path)
     remote_path = str(remote_path).replace("\\", "/")
 
-    # Create remote directory if it doesn't exist
-    try:
-        sftp.stat(remote_path)
-    except IOError:
-        try:
-            sftp.mkdir(remote_path)
-            logger.info(f"Created remote directory: {remote_path}")
-        except IOError as e:
-            logger.error(f"Failed to create remote directory {remote_path}: {e}")
-            return
+    # Create remote directory if it doesn't exist (recursively)
+    mkdir_p(sftp, remote_path)
 
     for item in os.listdir(local_path):
         if item in EXCLUDE_LIST or item.endswith(".pyc") or item.endswith(".DS_Store"):
