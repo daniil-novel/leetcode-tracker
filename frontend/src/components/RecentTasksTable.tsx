@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface Task {
   id: number;
@@ -12,9 +13,57 @@ interface Task {
 
 interface RecentTasksTableProps {
   tasks: Task[];
+  onTasksUpdated?: () => void;
 }
 
-const RecentTasksTable: React.FC<RecentTasksTableProps> = ({ tasks }) => {
+const RecentTasksTable: React.FC<RecentTasksTableProps> = ({ tasks, onTasksUpdated }) => {
+  const { token } = useAuth();
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/import/csv', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(result.message || `Успешно импортировано ${result.imported} задач`);
+        if (onTasksUpdated) {
+          onTasksUpdated();
+        }
+      } else {
+        alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+      }
+    } catch (error) {
+      alert('Ошибка загрузки файла: ' + (error as Error).message);
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <section className="table-section">
       <h2>
@@ -22,6 +71,35 @@ const RecentTasksTable: React.FC<RecentTasksTableProps> = ({ tasks }) => {
         Последние задачи
         <span className="task-counter" id="taskCounter">{tasks.length} задач</span>
       </h2>
+      <div style={{ marginBottom: '15px' }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={handleImportClick}
+          disabled={isImporting}
+          style={{
+            padding: '10px 20px',
+            background: 'rgba(59, 130, 246, 0.2)',
+            color: '#60a5fa',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '6px',
+            cursor: isImporting ? 'not-allowed' : 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>📥</span>
+          {isImporting ? 'Импорт...' : 'Импорт из CSV'}
+        </button>
+      </div>
       <div className="table-wrapper">
         <table>
           <thead>

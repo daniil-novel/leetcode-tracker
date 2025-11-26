@@ -144,7 +144,7 @@ const Dashboard = () => {
         timeStats={timeStats}
       />
 
-      <RecentTasksTable tasks={recentTasks} />
+      <RecentTasksTable tasks={recentTasks} onTasksUpdated={fetchData} />
     </div>
   );
 };
