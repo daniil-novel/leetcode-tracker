@@ -1,9 +1,14 @@
 /* Profile Page Styles */
 
-.profile-container {
+/* Root wrapper to override global body styles */
+.profile-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 2rem 0;
+}
+
+.profile-container {
+  /* Removed min-height and background as they're now on .profile-page */
 }
 
 .profile-content {

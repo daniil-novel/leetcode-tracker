@@ -4,16 +4,15 @@ from pathlib import Path
 import logging
 
 from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .database import Base, engine
 from . import models
 from .config import settings
-from .routers import auth, tasks, stats, leetcode, sync, profile
+from .routers import auth, tasks, stats, leetcode, sync, profile, frontend
 from .leetcode_client import close_leetcode_client
 from .background_sync import start_sync_service, stop_sync_service
 
@@ -96,6 +95,7 @@ app.include_router(stats.router)
 app.include_router(leetcode.router)
 app.include_router(sync.router)
 app.include_router(profile.router)
+app.include_router(frontend.router) # Keep frontend router for / and /login
 
 # Lifecycle events
 @app.on_event("startup")
@@ -120,7 +120,7 @@ async def shutdown_event():
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     # Don't serve SPA for API paths
-    if full_path.startswith(("api/", "auth/", "add/", "stats/")):
+    if full_path.startswith(("api/", "auth/", "add/", "stats/", "static/")): # Added "static/"
         raise HTTPException(status_code=404, detail="Not found")
     
     # Check if file exists in dist (e.g. favicon.ico, robots.txt)

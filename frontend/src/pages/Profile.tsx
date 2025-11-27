@@ -120,7 +120,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="profile-container">
+    <div className="profile-page">
+      <div className="profile-container">
       <div className="profile-content">
         <div className="profile-header">
           <h1 className="profile-title">Profile Settings</h1>
@@ -254,6 +255,7 @@ export default function Profile() {
             ← Back to Dashboard
           </a>
         </div>
+      </div>
       </div>
     </div>
   );
