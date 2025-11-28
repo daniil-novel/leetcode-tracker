@@ -208,6 +208,9 @@ def main() -> None:
 
         # 6.5 Start Grafana
         logger.info("📊 Starting Grafana...")
+        # Ensure DB is readable by Grafana (if running as non-root, but we set user:0 so it should be fine. Still good practice)
+        execute_command(client, f"chmod 644 {REMOTE_DIR}/leetcode.db", "Setting DB permissions")
+        
         # Try docker compose (v2) first, then docker-compose (v1)
         if not execute_command(client, f"cd {REMOTE_DIR} && docker compose up -d", "Starting Grafana (docker compose)"):
              execute_command(client, f"cd {REMOTE_DIR} && docker-compose up -d", "Starting Grafana (docker-compose)")

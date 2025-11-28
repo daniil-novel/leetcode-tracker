@@ -4,11 +4,12 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: leetcode_grafana
+    user: "0"
     ports:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./leetcode.db:/var/lib/grafana/leetcode.db:ro
+      - ./leetcode.db:/data/leetcode.db:ro
       - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_INSTALL_PLUGINS=fr-ser-sqlite-datasource

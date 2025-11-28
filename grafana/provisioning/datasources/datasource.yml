@@ -4,5 +4,5 @@ datasources:
   - name: LeetCode DB
     type: fr-ser-sqlite-datasource
     access: proxy
-    url: /var/lib/grafana/leetcode.db
+    url: /data/leetcode.db
     isDefault: true
