@@ -24,7 +24,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "fr-ser-sqlite-datasource",
+        "type": "frser-sqlite-datasource",
         "uid": "P1809F7CD0C757291"
       },
       "fieldConfig": {
@@ -101,7 +101,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "fr-ser-sqlite-datasource",
+            "type": "frser-sqlite-datasource",
             "uid": "P1809F7CD0C757291"
           },
           "rawQuery": "SELECT date, count(*) as count FROM solved_tasks GROUP BY date ORDER BY date",
@@ -114,7 +114,7 @@
     },
     {
       "datasource": {
-        "type": "fr-ser-sqlite-datasource",
+        "type": "frser-sqlite-datasource",
         "uid": "P1809F7CD0C757291"
       },
       "fieldConfig": {
@@ -162,7 +162,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "fr-ser-sqlite-datasource",
+            "type": "frser-sqlite-datasource",
             "uid": "P1809F7CD0C757291"
           },
           "rawQuery": "SELECT difficulty, count(*) as count FROM solved_tasks GROUP BY difficulty",

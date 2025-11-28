@@ -12,7 +12,7 @@ services:
       - ./leetcode.db:/data/leetcode.db:ro
       - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
-      - GF_INSTALL_PLUGINS=fr-ser-sqlite-datasource
+      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
