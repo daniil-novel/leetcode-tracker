@@ -1,5 +1,4 @@
 from datetime import date, datetime
-from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
 
@@ -7,19 +6,19 @@ from pydantic import BaseModel, EmailStr
 # User schemas
 class UserBase(BaseModel):
     username: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
 
 
 class UserCreate(UserBase):
     oauth_provider: str
     oauth_id: str
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
 
 
 class User(UserBase):
     id: int
-    oauth_provider: Optional[str] = None
-    avatar_url: Optional[str] = None
+    oauth_provider: str | None = None
+    avatar_url: str | None = None
     created_at: datetime
 
     class Config:
@@ -28,8 +27,8 @@ class User(UserBase):
 
 # UserProfile schemas
 class UserProfileBase(BaseModel):
-    display_name: Optional[str] = None
-    bio: Optional[str] = None
+    display_name: str | None = None
+    bio: str | None = None
 
 
 class UserProfileCreate(UserProfileBase):
@@ -82,12 +81,12 @@ class PrivacySettings(PrivacySettingsBase):
 class TaskBase(BaseModel):
     date: date
     platform: str = "leetcode"
-    problem_id: Optional[str] = None
-    title: Optional[str] = None
+    problem_id: str | None = None
+    title: str | None = None
     difficulty: str  # "Easy" | "Medium" | "Hard"
     points: int
-    time_spent: Optional[int] = None  # Time in minutes
-    notes: Optional[str] = None
+    time_spent: int | None = None  # Time in minutes
+    notes: str | None = None
 
 
 class TaskCreate(TaskBase):
@@ -96,7 +95,7 @@ class TaskCreate(TaskBase):
 
 class Task(TaskBase):
     id: int
-    user_id: Optional[int] = None
+    user_id: int | None = None
 
     class Config:
         from_attributes = True
@@ -123,7 +122,7 @@ class MonthGoalCreate(MonthGoalBase):
 
 class MonthGoal(MonthGoalBase):
     id: int
-    user_id: Optional[int] = None
+    user_id: int | None = None
 
     class Config:
         from_attributes = True
@@ -136,7 +135,7 @@ class CalendarDay(BaseModel):
     easy_count: int
     medium_count: int
     hard_count: int
-    tasks: List[Task] = []
+    tasks: list[Task] = []
 
 
 class MonthStats(BaseModel):
@@ -149,7 +148,7 @@ class MonthStats(BaseModel):
     medium_count: int
     hard_count: int
     progress_percent: float
-    calendar_days: List[CalendarDay]
+    calendar_days: list[CalendarDay]
 
 
 # Rank system
@@ -165,7 +164,7 @@ class LeaderboardEntry(BaseModel):
     rank: int
     user_id: int
     username: str
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
     show_avatar: bool = True
     show_name: bool = True
     xp: int
@@ -175,19 +174,19 @@ class LeaderboardEntry(BaseModel):
 
 class Leaderboard(BaseModel):
     period: str  # 'day', 'week', 'month'
-    entries: List[LeaderboardEntry]
+    entries: list[LeaderboardEntry]
 
 
 # User stats for profile
 class UserStats(BaseModel):
     user_id: int
     username: str
-    display_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    display_name: str | None = None
+    avatar_url: str | None = None
     show_avatar: bool = True
     show_name: bool = True
     show_stats: bool = True
-    
+
     # Stats
     total_xp: int = 0
     total_tasks: int = 0
@@ -196,11 +195,11 @@ class UserStats(BaseModel):
     hard_count: int = 0
     current_streak: int = 0
     avg_xp_per_task: float = 0.0
-    
+
     # Rank
     rank_name: str
     rank_icon: str
     rank_color: str
-    
+
     # Privacy
     privacy_settings: PrivacySettings

@@ -1,5 +1,6 @@
 import requests
 
+
 # Test endpoints
 base_url = "http://v353999.hosted-by-vdsina.com:8000"
 
@@ -33,8 +34,8 @@ print("\n3. Testing GitHub OAuth redirect...")
 try:
     response = requests.get(f"{base_url}/auth/github", allow_redirects=False, timeout=5)
     print(f"   Status: {response.status_code}")
-    if response.status_code == 307 or response.status_code == 302:
-        redirect_url = response.headers.get('Location', '')
+    if response.status_code in {307, 302}:
+        redirect_url = response.headers.get("Location", "")
         print(f"   ✅ Redirects to: {redirect_url[:100]}...")
         if "github.com" in redirect_url:
             print("   ✅ Redirects to GitHub OAuth")

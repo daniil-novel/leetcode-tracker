@@ -1,6 +1,8 @@
 import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 
 # By default use SQLite in current working directory.
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./leetcode.db")

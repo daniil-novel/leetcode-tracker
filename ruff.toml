@@ -1,0 +1,46 @@
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".venv",
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".vscode",
+    "assets",
+    "alembic",
+]
+
+[lint]
+select = ["ALL"]
+ignore = [
+    # conflicting rules: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "W191","E111","E114","E117","D206","D300","Q000","Q001","Q002","Q003","COM812","COM819",
+    # noisy rules
+    "CPY","TRY","S","FBT","EM","TC","G","C90","PLW2901","PLR0911","PLW1514","SIM108","SIM102",
+    "C401","D1","D203","D212","RET504","ANN401", "BLE001", "PLR0913", "ERA001",
+    "RUF001", "RUF002", "RUF003",
+    "ANN", "PLR0912", "PLR0915",
+    ]
+fixable = ["ALL"]
+unfixable = ["W605"]
+preview = false
+
+[lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"**/{tests}/*" = ["ANN", "PLR0913", "E501", "PLR2004"]
+"test_*.py" = ["T201", "ANN", "PLR2004", "S101", "E501", "RUF059"]
+"verify_*.py" = ["T201", "ANN", "PLR2004", "S101", "E501", "RUF059"]
+"leetcode_tracker/**/*.py" = ["B008"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[lint.isort]
+known-first-party = ["leetcode_tracker"]
+lines-after-imports = 2
+combine-as-imports = true
+force-sort-within-sections = true
+force-single-line = false
+order-by-type = true
