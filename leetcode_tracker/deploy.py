@@ -193,8 +193,24 @@ def main() -> None:
         )
         execute_command(client, "systemctl daemon-reload", "Reloading systemd daemon")
 
+        # 5.5 Update Nginx config
+        execute_command(
+            client, f"cp {REMOTE_DIR}/nginx-leetcode-tracker.conf /etc/nginx/sites-available/novel-cloudtech.com", "Updating Nginx config"
+        )
+        # Ensure symlink exists (just in case)
+        execute_command(
+            client, "ln -sf /etc/nginx/sites-available/novel-cloudtech.com /etc/nginx/sites-enabled/", "Ensuring Nginx symlink"
+        )
+        execute_command(client, "nginx -t && systemctl reload nginx", "Reloading Nginx")
+
         # 6. Start service
         execute_command(client, "systemctl start leetcode-tracker", "Starting service")
+
+        # 6.5 Start Grafana
+        logger.info("📊 Starting Grafana...")
+        # Try docker compose (v2) first, then docker-compose (v1)
+        if not execute_command(client, f"cd {REMOTE_DIR} && docker compose up -d", "Starting Grafana (docker compose)"):
+             execute_command(client, f"cd {REMOTE_DIR} && docker-compose up -d", "Starting Grafana (docker-compose)")
 
         # 7. check status
         time.sleep(2)
