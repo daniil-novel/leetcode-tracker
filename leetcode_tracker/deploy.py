@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path, PurePosixPath
+import subprocess
 import sys
 import time
 
@@ -31,6 +32,36 @@ EXCLUDE_LIST = {
     "deploy_to_server.sh",
     "node_modules",  # Exclude node_modules from frontend
 }
+
+
+def build_frontend():
+    """Build frontend application locally."""
+    logger.info("🏗️ Building frontend...")
+    frontend_dir = Path.cwd() / "frontend"
+
+    if not frontend_dir.exists():
+        logger.error(f"❌ Frontend directory not found at {frontend_dir}")
+        sys.exit(1)
+
+    # Check if npm is available
+    try:
+        subprocess.run(["npm", "--version"], check=True, capture_output=True, shell=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        logger.error("❌ npm is not installed or not in PATH")
+        sys.exit(1)
+
+    try:
+        # Install dependencies
+        logger.info("Installing frontend dependencies...")
+        subprocess.run(["npm", "install"], cwd=frontend_dir, check=True, shell=True)
+
+        # Build
+        logger.info("Building frontend...")
+        subprocess.run(["npm", "run", "build"], cwd=frontend_dir, check=True, shell=True)
+        logger.info("✅ Frontend built successfully")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ Frontend build failed: {e}")
+        sys.exit(1)
 
 
 def create_ssh_client():
@@ -126,6 +157,9 @@ def upload_files(sftp, local_path, remote_path) -> None:
 def main() -> None:
     start_time = time.time()
     logger.info("🚀 Starting deployment...")
+
+    # 0. Build frontend locally
+    build_frontend()
 
     client = create_ssh_client()
     sftp = client.open_sftp()

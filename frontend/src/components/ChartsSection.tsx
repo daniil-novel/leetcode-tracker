@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,12 +34,21 @@ interface ChartsSectionProps {
   timeStats: any;
 }
 
+interface ExpandedChart {
+  type: 'bar' | 'line' | 'doughnut' | 'pie';
+  data: any;
+  options: any;
+  title: string;
+}
+
 const ChartsSection: React.FC<ChartsSectionProps> = ({
   monthStats,
   dailyStats,
   difficultyStats,
   timeStats
 }) => {
+  const [expandedChart, setExpandedChart] = useState<ExpandedChart | null>(null);
+
   // Common chart options
   const commonOptions = {
     responsive: true,
@@ -205,6 +214,31 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({
     }]
   };
 
+  const handleExpand = (type: ExpandedChart['type'], data: any, options: any, title: string) => {
+    setExpandedChart({ type, data, options, title });
+  };
+
+  const closeModal = () => {
+    setExpandedChart(null);
+  };
+
+  const renderModalChart = () => {
+    if (!expandedChart) return null;
+    const { type, data, options } = expandedChart;
+    const modalOptions = {
+      ...options,
+      maintainAspectRatio: false,
+    };
+
+    switch (type) {
+      case 'bar': return <Bar data={data} options={modalOptions} />;
+      case 'line': return <Line data={data} options={modalOptions} />;
+      case 'doughnut': return <Doughnut data={data} options={modalOptions} />;
+      case 'pie': return <Pie data={data} options={modalOptions} />;
+      default: return null;
+    }
+  };
+
   return (
     <section className="charts">
       <h2>
@@ -214,38 +248,74 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({
       </h2>
       <div className="chart-grid">
         <div className="chart-card">
-          <h3>Прогресс к цели месяца</h3>
+          <h3>
+            Прогресс к цели месяца
+            <button className="expand-btn" onClick={() => handleExpand('doughnut', monthGoalData, pieOptions, 'Прогресс к цели месяца')}>⤢</button>
+          </h3>
           <Doughnut data={monthGoalData} options={pieOptions} />
         </div>
         <div className="chart-card">
-          <h3>Распределение по сложности</h3>
+          <h3>
+            Распределение по сложности
+            <button className="expand-btn" onClick={() => handleExpand('pie', difficultyData, pieOptions, 'Распределение по сложности')}>⤢</button>
+          </h3>
           <Pie data={difficultyData} options={pieOptions} />
         </div>
         <div className="chart-card">
-          <h3>Задачи в день</h3>
+          <h3>
+            Задачи в день
+            <button className="expand-btn" onClick={() => handleExpand('bar', tasksPerDayData, commonOptions, 'Задачи в день')}>⤢</button>
+          </h3>
           <Bar data={tasksPerDayData} options={commonOptions} />
         </div>
         <div className="chart-card">
-          <h3>XP в день</h3>
+          <h3>
+            XP в день
+            <button className="expand-btn" onClick={() => handleExpand('bar', xpPerDayData, commonOptions, 'XP в день')}>⤢</button>
+          </h3>
           <Bar data={xpPerDayData} options={commonOptions} />
         </div>
         <div className="chart-card">
-          <h3>Кумулятивный XP</h3>
+          <h3>
+            Кумулятивный XP
+            <button className="expand-btn" onClick={() => handleExpand('line', xpCumulativeData, commonOptions, 'Кумулятивный XP')}>⤢</button>
+          </h3>
           <Line data={xpCumulativeData} options={commonOptions} />
         </div>
         <div className="chart-card">
-          <h3>История Streak</h3>
+          <h3>
+            История Streak
+            <button className="expand-btn" onClick={() => handleExpand('line', streakChartData, commonOptions, 'История Streak')}>⤢</button>
+          </h3>
           <Line data={streakChartData} options={commonOptions} />
         </div>
         <div className="chart-card">
-          <h3>Время на задачу</h3>
+          <h3>
+            Время на задачу
+            <button className="expand-btn" onClick={() => handleExpand('bar', timePerTaskData, commonOptions, 'Время на задачу')}>⤢</button>
+          </h3>
           <Bar data={timePerTaskData as any} options={commonOptions} />
         </div>
         <div className="chart-card">
-          <h3>Среднее время по сложности</h3>
+          <h3>
+            Среднее время по сложности
+            <button className="expand-btn" onClick={() => handleExpand('bar', avgTimeByDifficultyData, commonOptions, 'Среднее время по сложности')}>⤢</button>
+          </h3>
           <Bar data={avgTimeByDifficultyData} options={commonOptions} />
         </div>
       </div>
+
+      {expandedChart && (
+        <div className="modal" style={{ display: 'flex' }} onClick={closeModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <span className="close-modal" onClick={closeModal}>&times;</span>
+            <h2>{expandedChart.title}</h2>
+            <div style={{ height: '500px', width: '100%' }}>
+              {renderModalChart()}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
