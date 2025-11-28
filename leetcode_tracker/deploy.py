@@ -208,12 +208,35 @@ def main() -> None:
 
         # 6.5 Start Grafana
         logger.info("📊 Starting Grafana...")
-        # Ensure DB is readable by Grafana (if running as non-root, but we set user:0 so it should be fine. Still good practice)
+        # Ensure DB is readable by Grafana
         execute_command(client, f"chmod 644 {REMOTE_DIR}/leetcode.db", "Setting DB permissions")
+
+        # Use docker run directly to avoid docker-compose version issues
+        logger.info("▶️  Recreating Grafana container...")
+        execute_command(client, "docker rm -f leetcode_grafana", "Removing old container")
+        execute_command(client, "docker volume create grafana_data", "Creating volume")
         
-        # Try docker compose (v2) first, then docker-compose (v1)
-        if not execute_command(client, f"cd {REMOTE_DIR} && docker compose up -d", "Starting Grafana (docker compose)"):
-             execute_command(client, f"cd {REMOTE_DIR} && docker-compose up -d", "Starting Grafana (docker-compose)")
+        grafana_cmd = (
+            "docker run -d "
+            "--name leetcode_grafana "
+            "--user 0 "
+            "-p 3000:3000 "
+            "-v grafana_data:/var/lib/grafana "
+            f"-v {REMOTE_DIR}/leetcode.db:/data/leetcode.db:ro "
+            f"-v {REMOTE_DIR}/grafana/provisioning:/etc/grafana/provisioning "
+            "-e GF_INSTALL_PLUGINS=fr-ser-sqlite-datasource "
+            "-e GF_SECURITY_ADMIN_PASSWORD=admin "
+            "-e GF_USERS_ALLOW_SIGN_UP=false "
+            "-e GF_SERVER_ROOT_URL='%(protocol)s://%(domain)s:%(http_port)s/grafana/' "
+            "-e GF_SERVER_SERVE_FROM_SUB_PATH=true "
+            "-e GF_SECURITY_ALLOW_EMBEDDING=true "
+            "-e GF_AUTH_ANONYMOUS_ENABLED=true "
+            "-e GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer "
+            "--restart unless-stopped "
+            "grafana/grafana:latest"
+        )
+        
+        execute_command(client, grafana_cmd, "Starting Grafana container")
 
         # 7. check status
         time.sleep(2)
