@@ -227,7 +227,7 @@ def main() -> None:
             "-e GF_INSTALL_PLUGINS=fr-ser-sqlite-datasource "
             "-e GF_SECURITY_ADMIN_PASSWORD=admin "
             "-e GF_USERS_ALLOW_SIGN_UP=false "
-            "-e GF_SERVER_ROOT_URL='%(protocol)s://%(domain)s:%(http_port)s/grafana/' "
+            "-e GF_SERVER_ROOT_URL='https://novel-cloudtech.com:7443/grafana/' "
             "-e GF_SERVER_SERVE_FROM_SUB_PATH=true "
             "-e GF_SECURITY_ALLOW_EMBEDDING=true "
             "-e GF_AUTH_ANONYMOUS_ENABLED=true "
@@ -239,7 +239,9 @@ def main() -> None:
         execute_command(client, grafana_cmd, "Starting Grafana container")
 
         # 7. check status
-        time.sleep(2)
+        time.sleep(5)
+        execute_command(client, "docker ps | grep leetcode_grafana", "Checking Grafana container status")
+        execute_command(client, "docker logs --tail 20 leetcode_grafana", "Grafana Logs")
         execute_command(client, "systemctl status leetcode-tracker --no-pager", "Checking service status")
 
         duration = time.time() - start_time
