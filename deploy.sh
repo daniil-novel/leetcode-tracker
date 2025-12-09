@@ -29,7 +29,8 @@ fi
 
 # 4. Build and start containers
 echo "🐳 Building and starting containers using: $DOCKER_CMD"
-$DOCKER_CMD up -d --build
+# Add --remove-orphans to clean up old containers
+$DOCKER_CMD up -d --build --remove-orphans
 
 # 5. Run migrations
 echo "🔄 Running database migrations..."
