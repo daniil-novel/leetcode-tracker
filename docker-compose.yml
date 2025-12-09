@@ -1,26 +1,95 @@
 version: '3.8'
 
 services:
+  # --- Application Stack ---
+  app:
+    build: .
+    container_name: leetcode-tracker-app
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://leetcode_user:leetcode_password@db:5432/leetcode_tracker
+      - ENABLE_METRICS=true
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: leetcode-tracker-db
+    restart: always
+    environment:
+      POSTGRES_USER: leetcode_user
+      POSTGRES_PASSWORD: leetcode_password
+      POSTGRES_DB: leetcode_tracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leetcode_user -d leetcode_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Monitoring Stack ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./grafana/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    ports:
+      - "9090:9090"
+
   grafana:
     image: grafana/grafana:latest
-    container_name: leetcode_grafana
-    user: "0"
-    ports:
-      - "3000:3000"
+    container_name: grafana
+    restart: always
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./leetcode.db:/data/leetcode.db:ro
       - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
-      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_SECURITY_ALLOW_EMBEDDING=true
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: always
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
 
 volumes:
+  postgres_data:
+  prometheus_data:
   grafana_data:

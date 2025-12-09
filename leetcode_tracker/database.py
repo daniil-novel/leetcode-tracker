@@ -4,19 +4,23 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-# By default use SQLite in current working directory.
+# Database URL from environment variable
+# Default to SQLite for backward compatibility
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./leetcode.db")
 
+# Configure connection arguments based on database type
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
+# Create engine with appropriate settings
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
+    pool_pre_ping=True,  # Enable connection health checks
 )
 
-# Enable WAL mode for SQLite
+# Enable WAL mode for SQLite (only if using SQLite)
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):

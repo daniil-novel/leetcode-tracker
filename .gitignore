@@ -154,3 +154,6 @@ Thumbs.db
 *.backup
 *.bak
 *_backup_*
+
+# Grafana
+grafana/data/
