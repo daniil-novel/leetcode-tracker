@@ -3,7 +3,7 @@
 # Stop on error
 set -e
 
-echo "🚀 Starting deployment..."
+echo "🚀 Starting deployment (v2)..."
 
 # 1. Stop systemd service if it exists and is running
 if systemctl is-active --quiet leetcode-tracker.service; then
@@ -17,27 +17,24 @@ fi
 echo "📥 Pulling latest code..."
 git pull
 
-# 3. Build and start containers
-echo "🐳 Building and starting Docker containers..."
-
-# Check if docker-compose (dash) exists, otherwise try docker compose (space)
-if command -v docker-compose &> /dev/null; then
-    echo "Using docker-compose (dash)..."
-    docker-compose up -d --build
-    
-    # Run migrations
-    echo "🔄 Running database migrations..."
-    sleep 5
-    docker-compose exec -T app uv run alembic upgrade head
+# 3. Determine Docker command
+echo "🔍 Checking Docker environment..."
+if command -v docker-compose >/dev/null 2>&1; then
+    echo "✅ Found 'docker-compose' (standalone)"
+    DOCKER_CMD="docker-compose"
 else
-    echo "Using docker compose (space)..."
-    docker compose up -d --build
-    
-    # Run migrations
-    echo "🔄 Running database migrations..."
-    sleep 5
-    docker compose exec -T app uv run alembic upgrade head
+    echo "⚠️ 'docker-compose' not found, trying 'docker compose' (plugin)"
+    DOCKER_CMD="docker compose"
 fi
+
+# 4. Build and start containers
+echo "🐳 Building and starting containers using: $DOCKER_CMD"
+$DOCKER_CMD up -d --build
+
+# 5. Run migrations
+echo "🔄 Running database migrations..."
+sleep 5
+$DOCKER_CMD exec -T app uv run alembic upgrade head
 
 echo "✅ Deployment complete!"
 echo "📊 Grafana: https://novel-cloudtech.com:7443/grafana/ (or http://<ip>:3000)"
