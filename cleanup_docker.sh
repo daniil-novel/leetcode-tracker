@@ -26,8 +26,10 @@ docker ps -a
 
 echo ""
 echo "Port usage check:"
-echo "Port 9091 (Prometheus):"
+echo "Port 9091 (occupied by external process):"
 sudo netstat -tulpn | grep :9091 || echo "  ✅ Port 9091 is free"
+echo "Port 9092 (Prometheus - new):"
+sudo netstat -tulpn | grep :9092 || echo "  ✅ Port 9092 is free"
 echo "Port 8081 (cAdvisor):"
 sudo netstat -tulpn | grep :8081 || echo "  ✅ Port 8081 is free"
 echo "Port 3000 (Grafana):"

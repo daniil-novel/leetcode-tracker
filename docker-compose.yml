@@ -16,6 +16,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   db:
     image: postgres:15-alpine
@@ -46,7 +52,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=15d'
     ports:
-      - "9091:9090"  # Changed to 9091 to avoid conflict
+      - "9092:9090"  # Changed to 9092 because 9091 is occupied by node process
 
   grafana:
     image: grafana/grafana:latest

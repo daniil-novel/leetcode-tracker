@@ -82,6 +82,13 @@ if FRONTEND_DIST_DIR.exists():
     )
 
 
+# Health check endpoint for Docker
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker healthcheck."""
+    return {"status": "healthy"}
+
+
 # Serve React App for root and fallback - MUST be defined BEFORE including routers
 # so that API routes take precedence
 @app.get("/")
