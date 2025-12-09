@@ -32,6 +32,13 @@ fi
 echo "🧹 Cleaning up old containers..."
 $DOCKER_CMD down --remove-orphans || true
 
+# 4.1. Force remove any remaining containers from this project
+echo "🧹 Force removing any remaining containers..."
+docker ps -a --filter "name=leetcode" --filter "name=prometheus" --filter "name=grafana" --filter "name=cadvisor" --filter "name=node_exporter" -q | xargs -r docker rm -f || true
+
+# 4.2. Wait a moment for ports to be released
+sleep 2
+
 # 5. Build and start containers
 echo "🐳 Building and starting containers using: $DOCKER_CMD"
 $DOCKER_CMD up -d --build
