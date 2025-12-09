@@ -19,13 +19,25 @@ git pull
 
 # 3. Build and start containers
 echo "🐳 Building and starting Docker containers..."
-docker compose up -d --build
 
-# 4. Run migrations
-echo "🔄 Running database migrations..."
-# Wait for DB to be ready
-sleep 5
-docker compose exec app uv run alembic upgrade head
+# Check if docker-compose (dash) exists, otherwise try docker compose (space)
+if command -v docker-compose &> /dev/null; then
+    echo "Using docker-compose (dash)..."
+    docker-compose up -d --build
+    
+    # Run migrations
+    echo "🔄 Running database migrations..."
+    sleep 5
+    docker-compose exec -T app uv run alembic upgrade head
+else
+    echo "Using docker compose (space)..."
+    docker compose up -d --build
+    
+    # Run migrations
+    echo "🔄 Running database migrations..."
+    sleep 5
+    docker compose exec -T app uv run alembic upgrade head
+fi
 
 echo "✅ Deployment complete!"
 echo "📊 Grafana: https://novel-cloudtech.com:7443/grafana/ (or http://<ip>:3000)"
