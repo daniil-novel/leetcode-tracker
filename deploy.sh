@@ -28,12 +28,15 @@ else
     DOCKER_CMD="docker compose"
 fi
 
-# 4. Build and start containers
-echo "🐳 Building and starting containers using: $DOCKER_CMD"
-# Add --remove-orphans to clean up old containers
-$DOCKER_CMD up -d --build --remove-orphans
+# 4. Stop and remove old containers to avoid ContainerConfig errors
+echo "🧹 Cleaning up old containers..."
+$DOCKER_CMD down --remove-orphans || true
 
-# 5. Run migrations
+# 5. Build and start containers
+echo "🐳 Building and starting containers using: $DOCKER_CMD"
+$DOCKER_CMD up -d --build
+
+# 6. Run migrations
 echo "🔄 Running database migrations..."
 sleep 5
 $DOCKER_CMD exec -T app uv run alembic upgrade head
