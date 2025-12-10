@@ -52,7 +52,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=15d'
     ports:
-      - "9092:9090"  # Changed to 9092 because 9091 is occupied by node process
+      - "9093:9090"  # Changed to 9093 because 9091 and 9092 are occupied by external processes
 
   grafana:
     image: grafana/grafana:latest
