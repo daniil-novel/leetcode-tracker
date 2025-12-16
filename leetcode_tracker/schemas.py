@@ -20,6 +20,15 @@ class User(UserBase):
     oauth_provider: str | None = None
     avatar_url: str | None = None
     created_at: datetime
+    
+    leetcode_username: str | None = None
+    ranking: int | None = None
+    reputation: int | None = None
+    total_solved: int | None = None
+    easy_solved: int | None = None
+    medium_solved: int | None = None
+    hard_solved: int | None = None
+    last_synced_at: datetime | None = None
 
     class Config:
         from_attributes = True

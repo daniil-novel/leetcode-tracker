@@ -109,11 +109,34 @@ class LeetCodeSyncService:
         try:
             client = get_leetcode_client()
 
-            # Fetch recent accepted submissions (last 20 to avoid rate limits)
+            # 1. Fetch User Profile & Stats
+            try:
+                profile = await client.get_user_profile(user.leetcode_username)
+                solved_stats = await client.get_user_solved_problems(user.leetcode_username)
+
+                if profile and profile.get("profile"):
+                    user_profile = profile["profile"]
+                    user.ranking = user_profile.get("ranking")
+                    user.reputation = user_profile.get("reputation")
+                
+                if solved_stats:
+                    user.total_solved = solved_stats.get("solvedProblem")
+                    user.easy_solved = solved_stats.get("easySolved")
+                    user.medium_solved = solved_stats.get("mediumSolved")
+                    user.hard_solved = solved_stats.get("hardSolved")
+                
+                user.last_synced_at = datetime.now(timezone.utc)
+                db.add(user)
+                
+            except Exception as e:
+                logger.error(f"Error fetching profile stats for {user.leetcode_username}: {e}")
+
+            # 2. Fetch recent accepted submissions (last 20 to avoid rate limits)
             submissions = await client.get_recent_ac_submissions(user.leetcode_username, limit=20)
 
             if not submissions:
                 logger.debug(f"No submissions found for {user.leetcode_username}")
+                db.commit() # Commit profile stats even if no new submissions
                 return
 
             synced_count = 0

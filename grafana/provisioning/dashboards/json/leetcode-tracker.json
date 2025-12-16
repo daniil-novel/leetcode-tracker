@@ -449,18 +449,18 @@
         "showHeader": true
       },
       "pluginVersion": "10.0.0",
-      "targets": [
+    "targets": [
         {
           "datasource": {
             "type": "postgres",
             "uid": "leetcode-tracker-postgres"
           },
           "format": "table",
-          "rawSql": "SELECT u.username, COUNT(t.id) as tasks_solved, COALESCE(SUM(t.points), 0) as total_xp FROM users u LEFT JOIN solved_tasks t ON u.id = t.user_id GROUP BY u.id, u.username ORDER BY total_xp DESC LIMIT 10",
+          "rawSql": "SELECT u.username, u.ranking, u.reputation, u.total_solved, u.easy_solved, u.medium_solved, u.hard_solved, COALESCE(SUM(t.points), 0) as total_xp FROM users u LEFT JOIN solved_tasks t ON u.id = t.user_id GROUP BY u.id, u.username, u.ranking, u.reputation, u.total_solved, u.easy_solved, u.medium_solved, u.hard_solved ORDER BY total_xp DESC LIMIT 10",
           "refId": "A"
         }
       ],
-      "title": "Top Users Leaderboard",
+      "title": "Top Users Leaderboard (with LeetCode Stats)",
       "type": "table"
     },
     {

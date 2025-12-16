@@ -31,6 +31,8 @@ services:
       POSTGRES_USER: leetcode_user
       POSTGRES_PASSWORD: leetcode_password
       POSTGRES_DB: leetcode_tracker
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -70,7 +72,10 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - prometheus
+      db:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
 
   node_exporter:
     image: prom/node-exporter:latest

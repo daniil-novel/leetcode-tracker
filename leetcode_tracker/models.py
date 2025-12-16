@@ -17,6 +17,15 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     leetcode_username = Column(String(100), nullable=True, index=True)  # LeetCode username for API sync
 
+    # LeetCode Stats
+    ranking = Column(Integer, nullable=True)
+    reputation = Column(Integer, nullable=True)
+    total_solved = Column(Integer, nullable=True)
+    easy_solved = Column(Integer, nullable=True)
+    medium_solved = Column(Integer, nullable=True)
+    hard_solved = Column(Integer, nullable=True)
+    last_synced_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     tasks = relationship("SolvedTask", back_populates="user", cascade="all, delete-orphan")
     month_goals = relationship("MonthGoal", back_populates="user", cascade="all, delete-orphan")
