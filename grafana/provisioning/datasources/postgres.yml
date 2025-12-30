@@ -5,7 +5,7 @@ datasources:
     type: postgres
     uid: leetcode-tracker-postgres
     access: proxy
-    url: db:5432
+    url: postgres:5432
     database: leetcode_tracker
     user: leetcode_user
     secureJsonData:

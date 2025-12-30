@@ -50,7 +50,7 @@ echo ""
 
 echo "4️⃣ Проверка логов синхронизации..."
 echo "-----------------------------------"
-$DOCKER_CMD logs app --tail 30 | grep -A 5 -B 5 "sync"
+$DOCKER_CMD logs --tail 30 app | grep -A 5 -B 5 "sync" || echo "Логи синхронизации не найдены"
 echo ""
 
 echo "5️⃣ Проверка синхронизированных задач..."

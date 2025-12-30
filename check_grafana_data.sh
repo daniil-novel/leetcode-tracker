@@ -47,7 +47,7 @@ echo ""
 # 5. Проверка пользователей с leetcode_username
 echo "5️⃣ Пользователи с LeetCode username..."
 echo "-----------------------------------"
-$DOCKER_CMD exec -T db psql -U leetcode_user -d leetcode_tracker -c "SELECT id, username, leetcode_username, total_solved, last_synced_at FROM users;"
+$DOCKER_CMD exec -T db psql -U leetcode_user -d leetcode_tracker -c "SELECT id, username, leetcode_username, last_synced_at FROM users;"
 echo ""
 
 # 6. Проверка количества задач
@@ -71,13 +71,13 @@ echo ""
 # 9. Проверка логов приложения
 echo "9️⃣ Последние 20 строк логов приложения..."
 echo "-----------------------------------"
-$DOCKER_CMD logs app --tail 20
+$DOCKER_CMD logs --tail 20 app
 echo ""
 
 # 10. Проверка логов Grafana
 echo "🔟 Последние 20 строк логов Grafana..."
 echo "-----------------------------------"
-$DOCKER_CMD logs grafana --tail 20
+$DOCKER_CMD logs --tail 20 grafana
 echo ""
 
 echo "========================================="

@@ -9,12 +9,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://leetcode_user:leetcode_password@db:5432/leetcode_tracker
+      - DATABASE_URL=postgresql://leetcode_user:leetcode_password@postgres:5432/leetcode_tracker
       - ENABLE_METRICS=true
     env_file:
       - .env
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -23,9 +23,9 @@ services:
       retries: 5
       start_period: 30s
 
-  db:
+  postgres:
     image: postgres:16-alpine
-    container_name: leetcode-tracker-db
+    container_name: leetcode-tracker-postgres
     restart: always
     environment:
       POSTGRES_USER: leetcode_user
@@ -72,7 +72,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       prometheus:
         condition: service_started

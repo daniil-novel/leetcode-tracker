@@ -157,3 +157,11 @@ Thumbs.db
 
 # Grafana
 grafana/data/
+
+# SQLite (legacy)
+*.db-shm
+*.db-wal
+
+# Backups
+*_backup.json
+migration_backup.json
