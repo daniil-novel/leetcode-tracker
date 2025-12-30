@@ -10,7 +10,6 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://leetcode_user:leetcode_password@postgres:5432/leetcode_tracker
-      - ENABLE_METRICS=true
     env_file:
       - .env
     depends_on:
@@ -41,68 +40,17 @@ services:
       timeout: 5s
       retries: 5
 
-  # --- Monitoring Stack ---
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+  nginx:
+    image: nginx:alpine
+    container_name: leetcode-tracker-nginx
     restart: always
-    volumes:
-      - ./grafana/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=15d'
     ports:
-      - "9093:9090"  # Changed to 9093 because 9091 and 9092 are occupied by external processes
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: always
+      - "80:80"
+      - "443:443"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=https://novel-cloudtech.com:7443/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-    ports:
-      - "3000:3000"
+      - ./nginx-leetcode-tracker.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      postgres:
-        condition: service_healthy
-      prometheus:
-        condition: service_started
-
-  node_exporter:
-    image: prom/node-exporter:latest
-    container_name: node_exporter
-    restart: always
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
-    restart: always
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - "8081:8080"  # Changed to 8081 to avoid conflict
+      - app
 
 volumes:
   postgres_data:
-  prometheus_data:
-  grafana_data:

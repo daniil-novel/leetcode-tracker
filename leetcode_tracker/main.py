@@ -128,8 +128,8 @@ async def shutdown_event() -> None:
 # Exclude API paths to prevent conflicts
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    # Don't serve SPA for API paths and Grafana
-    if full_path.startswith(("api/", "auth/", "add/", "stats/", "static/", "grafana/", "grafana")):
+    # Don't serve SPA for API paths
+    if full_path.startswith(("api/", "auth/", "add/", "stats/", "static/")):
         raise HTTPException(status_code=404, detail="Not found")
 
     # Check if file exists in dist (e.g. favicon.ico, robots.txt)
