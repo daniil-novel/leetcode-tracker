@@ -1,0 +1,53 @@
+services:
+  # --- Application Stack ---
+  app:
+    build: .
+    container_name: leetcode-tracker-app
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://leetcode_user:leetcode_password@postgres:5432/leetcode_tracker
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: leetcode-tracker-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: leetcode_user
+      POSTGRES_PASSWORD: leetcode_password
+      POSTGRES_DB: leetcode_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leetcode_user -d leetcode_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: leetcode-tracker-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:

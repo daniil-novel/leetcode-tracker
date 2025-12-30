@@ -53,11 +53,11 @@ echo ✅ Используется команда: !DOCKER_CMD!
 
 REM Остановка существующих контейнеров
 echo 🛑 Остановка существующих контейнеров...
-!DOCKER_CMD! down
+!DOCKER_CMD! -f docker-compose.local.yml down
 
 REM Сборка и запуск контейнеров
 echo 🔨 Сборка и запуск контейнеров...
-!DOCKER_CMD! up --build -d
+!DOCKER_CMD! -f docker-compose.local.yml up --build -d
 if errorlevel 1 (
     echo ❌ ERROR: Не удалось запустить контейнеры
     exit /b 1
@@ -69,11 +69,11 @@ timeout /t 5 /nobreak >nul
 
 REM Применение миграций
 echo 📦 Применение миграций БД...
-!DOCKER_CMD! exec -T app uv run alembic upgrade head
+!DOCKER_CMD! -f docker-compose.local.yml exec -T app uv run alembic upgrade head
 if errorlevel 1 (
     echo ❌ ERROR: Не удалось применить миграции
     echo 📋 Логи приложения:
-    !DOCKER_CMD! logs app --tail 30
+    !DOCKER_CMD! -f docker-compose.local.yml logs app --tail 30
     exit /b 1
 )
 
@@ -84,17 +84,16 @@ echo.
 echo ✅ Приложение запущено!
 echo.
 echo 📊 Статус контейнеров:
-!DOCKER_CMD! ps
+!DOCKER_CMD! -f docker-compose.local.yml ps
 echo.
 echo 🌐 Доступные сервисы:
 echo    - Приложение: http://localhost:8000
-echo    - Grafana: http://localhost:3000
-echo    - Prometheus: http://localhost:9093
+echo    - Nginx proxy: http://localhost:80
 echo.
 echo 📝 Полезные команды:
-echo    - Просмотр логов: !DOCKER_CMD! logs -f [service_name]
-echo    - Просмотр всех логов: !DOCKER_CMD! logs -f
-echo    - Перезапуск сервиса: !DOCKER_CMD! restart [service_name]
-echo    - Остановка: !DOCKER_CMD! down
+echo    - Просмотр логов: !DOCKER_CMD! -f docker-compose.local.yml logs -f [service_name]
+echo    - Просмотр всех логов: !DOCKER_CMD! -f docker-compose.local.yml logs -f
+echo    - Перезапуск сервиса: !DOCKER_CMD! -f docker-compose.local.yml restart [service_name]
+echo    - Остановка: !DOCKER_CMD! -f docker-compose.local.yml down
 echo    - Или используйте: stop_local.bat
 echo.

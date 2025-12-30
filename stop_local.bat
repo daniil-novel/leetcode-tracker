@@ -13,7 +13,7 @@ if errorlevel 1 (
 )
 
 REM Остановка и удаление контейнеров
-!DOCKER_CMD! down
+!DOCKER_CMD! -f docker-compose.local.yml down
 
 if errorlevel 1 (
     echo ⚠️  Возникли проблемы при остановке контейнеров
@@ -23,11 +23,11 @@ if errorlevel 1 (
 )
 
 REM Проверка оставшихся контейнеров
-for /f %%i in ('docker ps -a --filter "name=leetcode" --filter "name=prometheus" --filter "name=grafana" -q 2^>nul ^| find /c /v ""') do set REMAINING=%%i
+for /f %%i in ('docker ps -a --filter "name=leetcode" -q 2^>nul ^| find /c /v ""') do set REMAINING=%%i
 
 if !REMAINING! gtr 0 (
     echo ⚠️  Обнаружены оставшиеся контейнеры:
-    docker ps -a --filter "name=leetcode" --filter "name=prometheus" --filter "name=grafana"
+    docker ps -a --filter "name=leetcode"
     echo.
-    echo Для полной очистки выполните: docker ps -a ^| findstr leetcode ^| ... (ручная очистка^)
+    echo Для полной очистки выполните: docker rm -f $(docker ps -a --filter "name=leetcode" -q)
 )
